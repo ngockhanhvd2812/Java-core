@@ -633,7 +633,7 @@ Trong Java, có nhiều cách để tạo Map đồng bộ (thread-safe):
 
 **So sánh hiệu suất:**
 - ConcurrentHashMap > Hashtable > SynchronizedMap
-- ConcurrentHashMap cho phép nhiều luồng đọc đồng thời và số lượng luồng ghi được giới hạn bởi số lượng segment (mặc định là 16)
+- - ConcurrentHashMap trong Java 8+: sử dụng kết hợp CAS và synchronized trên các bucket riêng lẻ (fine-grained locking), tree hóa bucket khi cần. Không còn segment như Java 7.
 
 **Ví dụ sử dụng ConcurrentHashMap:**
 ```java
@@ -671,22 +671,18 @@ public class ConcurrentMapExample {
 
 Dưới đây là bảng so sánh với dấu `x` cho những phương thức không được hỗ trợ
 
-| Phương thức | List | Map | Set |
-| --- | --- | --- | --- |
-| Thêm | `add(E element)` | `put(K key, V value)` | `add(E element)` |
-| Sửa | `set(int index, E element)` | `put(K key, V value)` | x |
-| Xóa | `remove(int index)` | `remove(Object key)` | `remove(Object o)` |
-| Truy cập | `get(int index)` | `get(Object key)` | x |
-| Kiểm tra phần tử | `contains(Object o)` | `containsKey(Object key)`, `containsValue(Object value)` | `contains(Object o)` |
-| Kích thước | `size()` | `size()` | `size()` |
-| Kiểm tra rỗng | `isEmpty()` | `isEmpty()` | `isEmpty()` |
-| Xóa tất cả | `clear()` | `clear()` | `clear()` |
-| Trả về tập hợp con | `subList(int fromIndex, int toIndex)` | `entrySet()`, `keySet()`, `values()` | `toArray()` |
-| Chỉ số hoặc khóa | `indexOf(Object o)` | `keySet()` | x |
-| Tập hợp các phần tử | x | `entrySet()`, `keySet()`, `values()` | x |
-| Thêm tập hợp | x | x | `addAll(Collection<? extends E> c)` |
-| Xóa tập hợp | x | x | `removeAll(Collection<?> c)` |
-| Giữ lại phần tử | x | x | `retainAll(Collection<?> c)` |
+| Thao tác       | List                           | Set                            | Map                      |
+| -------------- | ------------------------------ | ------------------------------ | ------------------------ |
+| Thêm 1 phần tử | `add(e)`                       | `add(e)`                       | `put(k,v)`               |
+| Thêm nhiều     | `addAll(c)`                    | `addAll(c)`                    | `putAll(m)`              |
+| Sửa            | `set(i,e)`                     | —                              | `put(k,v)`               |
+| Xóa 1          | `remove(i or o)`               | `remove(o)`                    | `remove(k)`              |
+| Xóa theo tập   | `removeAll(c)`                 | `removeAll(c)`                 | —                        |
+| Giữ giao       | `retainAll(c)`                 | `retainAll(c)`                 | —                        |
+| Truy cập       | `get(i)`                       | —                              | `get(k)`                 |
+| Tìm chứa       | `contains(o)`/`containsAll(c)` | `contains(o)`/`containsAll(c)` | `containsKey/Value`      |
+| Kích thước     | `size()`                       | `size()`                       | `size()`                 |
+| Tập con        | `subList(...)`                 | `toArray()`                    | `entrySet/keySet/values` |
 
 **Giải thích chi tiết:**
 - **List**: Cho phép thêm, sửa, xóa và truy cập các phần tử theo chỉ số. Không hỗ trợ các thao tác tập hợp (addAll, removeAll, retainAll) và không có khái niệm về khóa.
@@ -695,15 +691,12 @@ Dưới đây là bảng so sánh với dấu `x` cho những phương thức kh
 
 ### 5. Phân biệt `String`, `StringBuilder`, và `StringBuffer`
 
-| Đặc điểm | String | StringBuffer | StringBuilder |
-| --- | --- | --- | --- |
-| Tính chất | Immutable (không thay đổi được) | Mutable (thay đổi được) | Mutable (thay đổi được) |
-| Thread safety | Thread-safe (vì immutable) | Thread-safe (sử dụng synchronized) | Không thread-safe |
-| Hiệu suất | Thấp khi thực hiện nhiều thao tác nối chuỗi | Trung bình | Cao nhất |
-| Sử dụng bộ nhớ | Tốn nhiều bộ nhớ khi thực hiện nhiều thao tác nối chuỗi | Tiết kiệm bộ nhớ hơn String | Tiết kiệm bộ nhớ nhất |
-| Kế thừa | Không kế thừa từ bất kỳ lớp nào | Kế thừa từ Object | Kế thừa từ Object |
-| Triển khai | Không triển khai interface nào đặc biệt | Triển khai CharSequence, Appendable | Triển khai CharSequence, Appendable |
-| Phiên bản giới thiệu | Java 1.0 | Java 1.0 | Java 1.5 |
+| Thuộc tính          | String                                                                                | StringBuffer                                            | StringBuilder                           |
+| ------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| Tính chất           | **immutable**                                                                         | mutable, synchronized                                   | mutable, non-sync                       |
+| Thread-safety       | An toàn do bất biến                                                                   | Có                                                      | Không                                   |
+| Hiệu năng nối chuỗi | Thấp (tạo mới)                                                                        | Trung bình                                              | Cao                                     |
+| Kế thừa / Interface | `extends Object`, **implements** `CharSequence`, `Comparable<String>`, `Serializable` | implements `CharSequence`, `Appendable`, `Serializable` | implements `CharSequence`, `Appendable` |
 
 **Giải thích chi tiết:**
 
@@ -917,22 +910,26 @@ public class OuterClass {
 | boolean | 1-bit | false | true | false |
 | byte | 8-bit | -128 | 127 | 0 |
 | short | 16-bit | -32,768 | 32,767 | 0 |
-| char | 16-bit | 0 | 65,535 (biểu diễn Unicode) | \u0000 (null) |
+| char | 16-bit | 0 | 65,535 (biểu diễn Unicode) | \u0000 |
 | int | 32-bit | -2^31 (-2,147,483,648) | 2^31 - 1 (2,147,483,647) | 0 |
 | float | 32-bit | ~1.4E-45 | ~3.4E+38 | 0.0F |
 | long | 64-bit | -2^63 (-9,223,372,036,854,775,808) | 2^63 - 1 (9,223,372,036,854,775,807) | 0L |
 | double | 64-bit | ~4.9E-324 | ~1.7E+308 | 0.0D |
 
+---
+
+> `char` mặc định là ký tự NUL `'\u0000'`, **không** phải `null`.
+
 ```java
-public class MyClass {
-    boolean data; // Giá trị mặc định là false
-    byte data; // Giá trị mặc định là 0
-    short data; // Giá trị mặc định là 0
-    char data; // Giá trị mặc định là \u0000 hoặc '\0'
-    int data; // Giá trị mặc định là 0
-    float data; // Giá trị mặc định là 0.0F
-    long data; // Giá trị mặc định là 0L
-    double data; // Giá trị mặc định là 0.0D
+public class DefaultValueExample {
+    boolean b;    // false
+    byte by;      // 0
+    short s;      // 0
+    char c;       // '\u0000'
+    int i;        // 0
+    float f;      // 0.0f
+    double d;     // 0.0d
+    long l;       // 0L
 }
 ```
 
@@ -1332,6 +1329,8 @@ copyOnWriteList.add("A");
 copyOnWriteList.add("B");
 
 // Duyệt an toàn mà không cần synchronized
+// CHÚ THÍCH: Chỉ dùng khi ĐỌC NHIỀU, GHI RẤT ÍT
+// Lưu ý: Hiệu năng ghi kém hơn 10-100x so với ArrayList thông thường
 for (String s : copyOnWriteList) {
     System.out.println(s);
 }
@@ -1596,22 +1595,13 @@ public class ThreadStatesExample {
 
 **Concurrency với một luồng (Single-threaded Concurrency):**
 ```java
-// Sử dụng event loop trong Node.js
-const fs = require('fs');
-
-fs.readFile('file1.txt', (err, data) => {
-  console.log('File 1 read');
+CompletableFuture.supplyAsync(() -> {
+    // Đọc file 1
+    return readFile("file1.txt");
+}).thenAccept(result -> {
+    System.out.println("File 1 read");
+    // Tiếp tục xử lý
 });
-
-fs.readFile('file2.txt', (err, data) => {
-  console.log('File 2 read');
-});
-
-console.log('Reading files...');
-// Output: 
-// Reading files...
-// File 1 read
-// File 2 read
 ```
 
 **Multithreading trong Java:**
@@ -1975,7 +1965,7 @@ public class FilesWalkExceptionExample {
 
 | Đặc điểm | Files.walk | Files.walkFileTree |
 | --- | --- | --- |
-| Kiểu trả về | Stream<Path> | void |
+| Kiểu trả về | Stream<Path> | Path (trả về đường dẫn gốc đã duyệt) |
 | Cách sử dụng | Sử dụng với Stream API | Sử dụng với FileVisitor |
 | Xử lý ngoại lệ | Ném IOException | Có thể xử lý ngoại lệ trong visitFileFailed |
 | Linh hoạt | Ít linh hoạt hơn | Linh hoạt hơn |
@@ -2096,9 +2086,9 @@ try {
 **b. try-with-resources (Java 7+)**
 
 ```java
-try (FileInputStream fis = new FileInputStream("file.txt");
-     BufferedReader br = new BufferedReader(new FileReader("file.txt"))) {
-    // Sử dụng các resource
+try (BufferedReader br = new BufferedReader(
+         new InputStreamReader(new FileInputStream("file.txt"), StandardCharsets.UTF_8))) {
+    // Sử dụng resource
     String line = br.readLine();
     System.out.println(line);
 } catch (IOException e) {
@@ -2918,11 +2908,13 @@ public class StreamCollectorsExamples {
                             .collect(joining(", ", "Names: ", "."));
         
         // Collecting andThen
-        List<String> upperCaseList = names.stream()
-                                        .collect(collectingAndThen(toList(), list -> {
-                                            list.forEach(String::toUpperCase);
-                                            return list;
-                                        }));
+        List<String> upper = names.stream()
+            .collect(Collectors.collectingAndThen(
+                Collectors.toList(),
+                list -> list.stream()
+                            .map(String::toUpperCase)
+                            .collect(Collectors.toList())
+            ));
     }
 }
 ```
@@ -2957,9 +2949,11 @@ public class ParallelStreamExample {
         System.out.println("Parallel sum: " + sumPar + " took " + timePar + "ms");
         
         // Khi nào nên sử dụng parallel stream:
-        // - Dữ liệu lớn
-        // - Các thao tác tốn nhiều CPU
-        // - Các phần tử độc lập với nhau
+        // - Dữ liệu đủ lớn (thường > 10,000 phần tử)
+        // - Thao tác đủ phức tạp để bù đắp chi phí tạo luồng
+        // - Dữ liệu có thể chia nhỏ mà không ảnh hưởng kết quả
+        // - Không có phụ thuộc thứ tự giữa các phần tử
+        // - Không có thao tác I/O trong stream
         
         // Khi nào không nên sử dụng:
         // - Dữ liệu nhỏ
@@ -3358,7 +3352,8 @@ public class RegexBasicExamples {
         System.out.println("\n5. Anchors:");
         System.out.println("hello".matches("^h")); // false (phải khớp toàn bộ)
         System.out.println("hello".matches("^hello$")); // true
-        System.out.println("hello world".matches("^hello")); // true (bắt đầu bằng hello)
+        System.out.println("hello world".matches("^hello")); // false (phải khớp toàn bộ chuỗi)
+        System.out.println("hello world".matches("^hello.*"); // true
         System.out.println("hello world".matches("world$")); // false
         System.out.println("hello world".matches(".*world$")); // true (kết thúc bằng world)
     }
@@ -3468,8 +3463,13 @@ import java.util.regex.*;
 
 public class EmailValidator {
     // Pattern cho email hợp lệ
+    // Cách 1
     private static final String EMAIL_REGEX = 
-        "^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+$";
+    "^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+(?:\\.[a-zA-Z0-9-]+)*$";
+
+    // Cách 2: Sử dụng thư viện Apache Commons Validator
+    // EmailValidator validator = EmailValidator.getInstance();
+    // boolean isValid = validator.isValid(email);
     
     private static final Pattern pattern = Pattern.compile(EMAIL_REGEX);
     
