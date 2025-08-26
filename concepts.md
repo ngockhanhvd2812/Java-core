@@ -59,6 +59,23 @@
     - [16.1. Tổng quan về `Stream API`](#161-tổng-quan-về-stream-api)
     - [16.2. Java Reflection](#162-java-reflection)
   - [17. Regular Expressions (Biểu thức chính quy)](#17-regular-expressions-biểu-thức-chính-quy)
+- [VII. Các khái niệm bổ sung quan trọng](#vii-các-khái-niệm-bổ-sung-quan-trọng)
+  - [18. Generics và Type Safety](#18-generics-và-type-safety)
+    - [18.1. Tổng quan về Generics](#181-tổng-quan-về-generics)
+    - [18.2. Bounded Type Parameters](#182-bounded-type-parameters)
+    - [18.3. Generic Methods và Wildcards](#183-generic-methods-và-wildcards)
+  - [19. Annotations và Metadata](#19-annotations-và-metadata)
+    - [19.1. Built-in Annotations](#191-built-in-annotations)
+    - [19.2. Custom Annotations](#192-custom-annotations)
+  - [20. Lambda Expressions và Functional Programming](#20-lambda-expressions-và-functional-programming)
+    - [20.1. Functional Interfaces](#201-functional-interfaces)
+    - [20.2. Method References](#202-method-references)
+  - [21. Optional và Null Safety](#21-optional-và-null-safety)
+    - [21.1. Optional Class](#211-optional-class)
+    - [21.2. Best Practices với Optional](#212-best-practices-với-optional)
+  - [22. Modules (Java 9+)](#22-modules-java-9)
+    - [22.1. Module System](#221-module-system)
+    - [22.2. Module Directives](#222-module-directives)
 
 
 ## I. Khái niệm cơ bản về lập trình hướng đối tượng (OOP)
@@ -66,6 +83,22 @@
 ### 1. Kế thừa và Ghi đè (Inheritance and Overriding)
 
 #### 1.1. Phân biệt kế thừa và ghi đè áp dụng với thuộc tính và phương thức `final`, `static`, `private`, `Constructors`:
+
+```mermaid
+flowchart TD
+    A["Thuộc tính/Phương thức"] --> B{"Loại modifier?"}
+    B -->|final| C["✓ Kế thừa<br>✗ Ghi đè"]
+    B -->|static| D["✓ Kế thừa<br>✗ Ghi đè (che giấu)"]
+    B -->|private| E["✗ Kế thừa<br>✗ Ghi đè"]
+    B -->|Constructor| F["✗ Kế thừa<br>✗ Ghi đè<br>✓ Gọi super()"]
+    B -->|public/protected| G["✓ Kế thừa<br>✓ Ghi đè"]
+    
+    C --> C1["Có thể sử dụng<br>không thể thay đổi"]
+    D --> D1["Thuộc về lớp<br>không phải instance"]
+    E --> E1["Chỉ truy cập<br>trong lớp định nghĩa"]
+    F --> F1["Mỗi lớp có<br>constructor riêng"]
+    G --> G1["Có thể override<br>và customize"]
+```
 
 | Loại | Kế thừa (Inheritance) | Ghi đè (Overriding) |
 | --- | --- | --- |
@@ -189,12 +222,53 @@ class SubClass extends FinalClass {
 
 #### 1.3. So sánh giữa quan hệ Is-A và Has-A
 
+```mermaid
+flowchart LR
+    subgraph IsA ["Quan hệ Is-A (Kế thừa)"]
+        A1[Animal] --> B1[Dog]
+        A1 --> C1[Cat]
+        B1 --> D1["Dog IS-A Animal"]
+        C1 --> E1["Cat IS-A Animal"]
+    end
+    
+    subgraph HasA ["Quan hệ Has-A (Composition)"]
+        A2[Car] --> B2[Engine]
+        A2 --> C2[Wheel]
+        A2 --> D2["Car HAS-A Engine"]
+        A2 --> E2["Car HAS-A Wheel"]
+    end
+    
+    IsA -.-> F["Sử dụng: extends"]
+    HasA -.-> G["Sử dụng: instance variables"]
+```
+
 | Loại quan hệ | Định nghĩa | Ví dụ | Mục đích |
 | --- | --- | --- | --- |
 | Is-A | Thể hiện sự kế thừa giữa các lớp. Một lớp con kế thừa từ một lớp cha. | `class Dog extends Animal {}` | Sử dụng để thể hiện mối quan hệ kế thừa, nơi lớp con thừa hưởng các thuộc tính và phương thức của lớp cha. |
 | Has-A | Thể hiện quan hệ thành phần giữa các lớp. Một lớp chứa một đối tượng của lớp khác. | `class Car { private Engine engine; }` | Sử dụng để thể hiện mối quan hệ thành phần, nơi một lớp có một hoặc nhiều đối tượng của lớp khác như là thành phần của nó. |
 
 ### 2. Phân biệt đa hình và ghi đè
+
+```mermaid
+flowchart TB
+    A["Lập trình OOP"] --> B["Đa hình<br>(Polymorphism)"]
+    A --> C["Ghi đè<br>(Overriding)"]
+    
+    B --> B1["Compile-time<br>(Overloading)"]
+    B --> B2["Runtime<br>(Dynamic binding)"]
+    
+    B1 --> B1a["Cùng tên method<br>Khác tham số"]
+    B2 --> B2a["Cùng tên method<br>Cùng tham số<br>Khác implementation"]
+    
+    C --> C1["Lớp con thay đổi<br>implementation của lớp cha"]
+    C --> C2["Sử dụng @Override"]
+    
+    C -.-> B2
+    C2 --> C2a["Runtime polymorphism<br>thông qua overriding"]
+    
+    style B fill:#e1f5fe
+    style C fill:#f3e5f5
+```
 
 #### 1. Ghi đè (Overriding)
 Ghi đè xảy ra khi một lớp con cung cấp cách triển khai lại cho một phương thức đã được định nghĩa trong lớp cha. Khi một phương thức trong lớp con có cùng tên, kiểu trả về và danh sách tham số giống hệt phương thức trong lớp cha, đó là ghi đè.
@@ -277,6 +351,28 @@ animal2.sound();  // Output: "Meow"
 - Đa hình là khái niệm tổng quát hơn, bao gồm cả đa hình lúc biên dịch (compile-time, như nạp chồng phương thức) và đa hình lúc chạy (runtime, như ghi đè phương thức).
 
 ### 3. Mối quan hệ giữa instance và kiểu dữ liệu
+
+```mermaid
+flowchart TD
+    A["Animal dog = new Dog();"] --> B{"Phân tích"}
+    
+    B --> C["Kiểu dữ liệu: Animal"]
+    B --> D["Instance: Dog object"]
+    
+    C --> C1["Xác định các method<br>có thể truy cập"]
+    C --> C2["Compile-time checking"]
+    
+    D --> D1["Xác định method nào<br>được thực thi"]
+    D --> D2["Runtime behavior"]
+    
+    C1 --> E["dog.eat() ✓<br>dog.bark() ✗"]
+    D1 --> F["Nếu Dog override eat()<br>thì gọi Dog.eat()"]
+    
+    G["(Dog) dog"] --> H["Ep kiểu để truy cập<br>Dog-specific methods"]
+    
+    style C fill:#ffecb3
+    style D fill:#c8e6c9
+```
 
 #### 3.1. Instance của 1 lớp:
 Instance của một lớp là một đối tượng được tạo ra từ một lớp cụ thể và nó thuộc về lớp mà nó được khởi tạo, bất kể kiểu dữ liệu mà nó đang được tham chiếu.
@@ -415,6 +511,70 @@ public class Main {
 
 #### 4.1. Tổng quan về Collection Framework
 
+```mermaid
+classDiagram
+    class Iterable {
+        <<interface>>
+        +iterator()
+    }
+    
+    class Collection {
+        <<interface>>
+        +add()
+        +remove()
+        +size()
+        +contains()
+    }
+    
+    class List {
+        <<interface>>
+        +get(index)
+        +set(index, element)
+        +indexOf()
+    }
+    
+    class Set {
+        <<interface>>
+        +add() (unique elements)
+    }
+    
+    class Queue {
+        <<interface>>
+        +offer()
+        +poll()
+        +peek()
+    }
+    
+    class Map {
+        <<interface>>
+        +put(key, value)
+        +get(key)
+        +keySet()
+        +values()
+    }
+    
+    Iterable <|-- Collection
+    Collection <|-- List
+    Collection <|-- Set
+    Collection <|-- Queue
+    
+    List <|.. ArrayList
+    List <|.. LinkedList
+    List <|.. Vector
+    
+    Set <|.. HashSet
+    Set <|.. LinkedHashSet
+    Set <|.. TreeSet
+    
+    Queue <|.. PriorityQueue
+    Queue <|.. LinkedList
+    
+    Map <|.. HashMap
+    Map <|.. LinkedHashMap
+    Map <|.. TreeMap
+    Map <|.. Hashtable
+```
+
 ```
 Java Collection Framework
 ├── Iterable
@@ -443,6 +603,31 @@ Java Collection Framework
 ```
 
 #### 4.2. List Interface (ArrayList, LinkedList, Vector)
+
+```mermaid
+flowchart TD
+    A["List Interface"] --> B[ArrayList]
+    A --> C[LinkedList]
+    A --> D[Vector]
+    
+    B --> B1["Mảng động<br>Truy cập: O(1)<br>Thêm/xóa: O(n)"]
+    B --> B2["Không synchronized<br>Nhanh nhưng unsafe"]
+    
+    C --> C1["Doubly linked list<br>Truy cập: O(n)<br>Thêm/xóa: O(1)"]
+    C --> C2["Implements Queue & Deque<br>removeLast(), addFirst()"]
+    
+    D --> D1["Mảng động<br>Tương tự ArrayList"]
+    D --> D2["Synchronized<br>Thread-safe nhưng chậm"]
+    
+    E["Lựa chọn sử dụng"] --> F{"Yêu cầu?"}
+    F -->|"Random access nhiều"| B
+    F -->|"Thêm/xóa nhiều"| C
+    F -->|"Cần thread-safe"| D
+    
+    style B fill:#e8f5e8
+    style C fill:#f0f8ff
+    style D fill:#fff2e8
+```
 
 **List (Interface)** // Các implement từ List Interface (ArrayList, LinkedList, Vector) đều có chung các phương thức này:
 - `add()`          // Thêm phần tử vào cuối danh sách
@@ -490,9 +675,34 @@ if (!list.isEmpty()) {
 }
 ```
 
-Cách 1 (`removeLast()`) hiệu quả hơn vì LinkedList được triển khai dưới dạng danh sách liên kết đôi, nên việc truy cập vào phần tử cuối là O(1). Trong khi đó, cách 2 cần phải duyệt đến phần tử cuối cùng nên có độ phức tạp O(n).
+Cách 1 (`removeLast()`) hiệu quả hơn vì LinkedList được triển khai dưới dạng danh sách liên kết đôi, nên việc truy cập vào phần tử cuối là O(1). Trong khi đó, cách 2 cũng có độ phức tạp O(1) nhưng `removeLast()` rõ ràng hơn về mục đích sử dụng.
 
 #### 4.3. Set Interface (HashSet, LinkedHashSet, TreeSet)
+
+```mermaid
+flowchart TD
+    A["Set Interface<br>(No duplicates)"] --> B[HashSet]
+    A --> C[LinkedHashSet]
+    A --> D[TreeSet]
+    
+    B --> B1["Hash Table<br>O(1) operations<br>No order guarantee"]
+    B --> B2["Fastest performance<br>Best for lookup"]
+    
+    C --> C1["Hash Table + Linked List<br>O(1) operations<br>Insertion order"]
+    C --> C2["Slightly slower than HashSet<br>Predictable iteration"]
+    
+    D --> D1["Red-Black Tree<br>O(log n) operations<br>Sorted order"]
+    D --> D2["NavigableSet interface<br>first(), last(), ceiling()"]
+    
+    E["Chọn Set implementation"] --> F{"Yêu cầu?"}
+    F -->|"Performance cao nhất"| B
+    F -->|"Duy trì thứ tự thêm"| C
+    F -->|"Tự động sắp xếp"| D
+    
+    style B fill:#ffe0e0
+    style C fill:#e0ffe0
+    style D fill:#e0e0ff
+```
 
 **Set (Interface)** // Các implement từ Set Interface (HashSet, LinkedHashSet, TreeSet) đều có chung các phương thức này:
 - `add()`            // Thêm phần tử vào Set (không thêm nếu đã tồn tại)
@@ -608,6 +818,30 @@ public class Main {
 
 #### 4.4.1. Cơ chế đồng bộ hóa của Map
 
+```mermaid
+flowchart TD
+    A["Thread-safe Map Solutions"] --> B[Hashtable]
+    A --> C["Collections.synchronizedMap()"]
+    A --> D[ConcurrentHashMap]
+    
+    B --> B1["Toàn bộ method synchronized<br>Một thread tại một thời điểm"]
+    B --> B2["Hiệu suất thấp<br>Không cho phép null"]
+    
+    C --> C1["Wrap existing Map<br>Synchronized wrapper"]
+    C --> C2["Linh hoạt nhưng chậm<br>Cần sync khi iterate"]
+    
+    D --> D1["Segment-based locking<br>Multiple threads cùng lúc"]
+    D --> D2["Hiệu suất cao nhất<br>CAS operations"]
+    
+    E["Performance Comparison"] --> F["ConcurrentHashMap > Hashtable > SynchronizedMap"]
+    
+    G["Java 8+ Improvements"] --> H["Fine-grained locking<br>Tree-ification<br>No segments"]
+    
+    style D fill:#c8e6c9
+    style B fill:#ffcdd2
+    style C fill:#fff9c4
+```
+
 Trong Java, có nhiều cách để tạo Map đồng bộ (thread-safe):
 
 1. **Hashtable**: Lớp cũ, tất cả các phương thức đều được đồng bộ hóa.
@@ -685,11 +919,39 @@ Dưới đây là bảng so sánh với dấu `x` cho những phương thức kh
 | Tập con        | `subList(...)`                 | `toArray()`                    | `entrySet/keySet/values` |
 
 **Giải thích chi tiết:**
-- **List**: Cho phép thêm, sửa, xóa và truy cập các phần tử theo chỉ số. Không hỗ trợ các thao tác tập hợp (addAll, removeAll, retainAll) và không có khái niệm về khóa.
+- **List**: Cho phép thêm, sửa, xóa và truy cập các phần tử theo chỉ số. Hỗ trợ các thao tác tập hợp như `addAll`, `removeAll`, `retainAll`. Có khái niệm về chỉ số (index).
 - **Map**: Quản lý các cặp key-value và hỗ trợ các phương thức liên quan đến khóa và giá trị. Không hỗ trợ truy cập theo chỉ số và các thao tác tập hợp.
 - **Set**: Cho phép thêm, xóa và kiểm tra phần tử duy nhất, không hỗ trợ truy cập trực tiếp qua chỉ số hay khóa. Hỗ trợ các thao tác tập hợp như `addAll`, `removeAll`, `retainAll`.
 
 ### 5. Phân biệt `String`, `StringBuilder`, và `StringBuffer`
+
+```mermaid
+flowchart TD
+    A["String Operations"] --> B[String]
+    A --> C[StringBuilder]
+    A --> D[StringBuffer]
+    
+    B --> B1["Immutable<br>Final class"]
+    B --> B2["Mỗi operation tạo object mới<br>Hiệu suất thấp khi concat nhiều"]
+    B --> B3["Thread-safe (do immutable)<br>Tốt cho các constant string"]
+    
+    C --> C1["Mutable<br>Dynamic array"]
+    C --> C2["Không synchronized<br>Hiệu suất cao nhất"]
+    C --> C3["Single-thread environment<br>Tốt cho string building"]
+    
+    D --> D1["Mutable<br>Dynamic array"]
+    D --> D2["Synchronized methods<br>Hiệu suất trung bình"]
+    D --> D3["Multi-thread environment<br>Thread-safe operations"]
+    
+    E["Lựa chọn sử dụng"] --> F{"Nhu cầu?"}
+    F -->|"String không đổi"| B
+    F -->|"Single-thread + performance"| C
+    F -->|"Multi-thread + safety"| D
+    
+    style B fill:#ffeb3b
+    style C fill:#4caf50
+    style D fill:#ff9800
+```
 
 | Thuộc tính          | String                                                                                | StringBuffer                                            | StringBuilder                           |
 | ------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------- |
@@ -779,6 +1041,33 @@ public class StringPerformanceTest {
 Kết quả thường cho thấy StringBuilder nhanh nhất, tiếp theo là StringBuffer, và String chậm nhất khi thực hiện nhiều thao tác nối chuỗi.
 
 ### 6. Lớp lồng nhau (Nested Class)
+
+```mermaid
+flowchart TD
+    A["Nested Classes in Java"] --> B["Static Nested Class"]
+    A --> C["Inner Class (Non-static)"]
+    A --> D["Local Class"]
+    A --> E["Anonymous Class"]
+    
+    B --> B1["static keyword<br>Không truy cập non-static members"]
+    B --> B2["Khởi tạo: Outer.Nested nested = new Outer.Nested()"]
+    B --> B3["Tốt cho helper classes"]
+    
+    C --> C1["Không static<br>Truy cập tất cả members của outer"]
+    C --> C2["Khởi tảo: Outer.Inner inner = outer.new Inner()"]
+    C --> C3["Cần outer instance<br>Memory leak risk"]
+    
+    D --> D1["Khai báo trong method<br>Truy cập final/effectively final"]
+    D --> D2["Không có access modifier<br>Chỉ sử dụng trong method"]
+    
+    E --> E1["Không có tên<br>Implement interface hoặc extend class"]
+    E --> E2["Kết hợp khai báo và khởi tạo<br>Sử dụng cho callback"]
+    
+    style B fill:#e3f2fd
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+    style E fill:#fff3e0
+```
 
 Trong Java, có 4 loại lớp lồng nhau:
 
@@ -905,6 +1194,36 @@ public class OuterClass {
 
 ### 7. Phạm vi kiểu dữ liệu trong Java
 
+```mermaid
+flowchart TB
+    A["Java Data Types"] --> B["Primitive Types"]
+    A --> C["Reference Types"]
+    
+    B --> B1["Integer Types"]
+    B --> B2["Floating Point"]
+    B --> B3["Character"]
+    B --> B4["Boolean"]
+    
+    B1 --> B1a["byte (8-bit)<br>-128 to 127"]
+    B1 --> B1b["short (16-bit)<br>-32,768 to 32,767"]
+    B1 --> B1c["int (32-bit)<br>-2^31 to 2^31-1"]
+    B1 --> B1d["long (64-bit)<br>-2^63 to 2^63-1"]
+    
+    B2 --> B2a["float (32-bit)<br>~1.4E-45 to ~3.4E+38"]
+    B2 --> B2b["double (64-bit)<br>~4.9E-324 to ~1.7E+308"]
+    
+    B3 --> B3a["char (16-bit)<br>0 to 65,535"]
+    B4 --> B4a["boolean<br>true or false"]
+    
+    C --> C1["Class"]
+    C --> C2["Interface"]
+    C --> C3["Array"]
+    C --> C4["String"]
+    
+    style B fill:#e3f2fd
+    style C fill:#f3e5f5
+```
+
 | Kiểu dữ liệu | Kích thước | Giá trị nhỏ nhất | Giá trị lớn nhất | Giá trị mặc định |
 | --- | --- | --- | --- | --- |
 | boolean | 1-bit | false | true | false |
@@ -934,6 +1253,32 @@ public class DefaultValueExample {
 ```
 
 ### 7.1. Phân biệt `Member Variable` và `Local Variable`
+
+```mermaid
+flowchart TD
+    A["Variables in Java"] --> B["Member Variables"]
+    A --> C["Local Variables"]
+    
+    B --> B1["Instance Variables"]
+    B --> B2["Static Variables"]
+    B --> B3["Declared in class<br>outside methods"]
+    B --> B4["Default values provided"]
+    B --> B5["Stored in heap memory"]
+    B --> B6["Accessible throughout class"]
+    
+    C --> C1["Method Parameters"]
+    C --> C2["Variables in methods"]
+    C --> C3["Declared inside<br>methods/blocks"]
+    C --> C4["No default values<br>Must initialize"]
+    C --> C5["Stored in stack memory"]
+    C --> C6["Accessible only in<br>declaring scope"]
+    
+    B4 --> D["int: 0<br>boolean: false<br>Object: null"]
+    C4 --> E["Compiler error if<br>used without initialization"]
+    
+    style B fill:#c8e6c9
+    style C fill:#ffecb3
+```
 
 | Đặc điểm | Member Variable | Local Variable |
 | --- | --- | --- |
@@ -1018,6 +1363,27 @@ public class Counter {
 
 ### 8. Thuộc tính và phương thức ngầm định trong Interface
 
+```mermaid
+classDiagram
+    class Interface {
+        <<interface>>
+        +public static final CONSTANT
+        +public abstract method()
+        +default defaultMethod()
+        +static staticMethod()
+    }
+    
+    note for Interface "All variables are implicitly:\n- public\n- static\n- final\n\nAll methods are implicitly:\n- public\n- abstract (unless default/static)"
+    
+    Interface --> ImplClass : implements
+    
+    class ImplClass {
+        +method() implementation
+    }
+    
+    note for ImplClass "Must implement\nall abstract methods"
+```
+
 #### 8.1. Lý do thuộc tính trong interface là `public static final`
 
 Các thuộc tính trong interface được mặc định là `public static final` vì:
@@ -1065,6 +1431,27 @@ Các phương thức trong interface được mặc định là `public abstract
 
 ### 9. Phạm vi truy cập (Access Modifiers)
 
+```mermaid
+flowchart LR
+    A["Access Modifiers"] --> B["public"]
+    A --> C["protected"]
+    A --> D["default (package)"]
+    A --> E["private"]
+    
+    B --> B1["✓ Same class<br>✓ Same package<br>✓ Subclass (different package)<br>✓ Anywhere"]
+    
+    C --> C1["✓ Same class<br>✓ Same package<br>✓ Subclass (different package)<br>✗ Anywhere else"]
+    
+    D --> D1["✓ Same class<br>✓ Same package<br>✗ Subclass (different package)<br>✗ Anywhere else"]
+    
+    E --> E1["✓ Same class<br>✗ Same package<br>✗ Subclass (different package)<br>✗ Anywhere else"]
+    
+    style B fill:#4caf50
+    style C fill:#ff9800
+    style D fill:#2196f3
+    style E fill:#f44336
+```
+
 | Modifier | Truy cập trong cùng lớp | Truy cập trong cùng package | Truy cập từ lớp con (khác package) | Truy cập từ mọi nơi |
 | --- | --- | --- | --- | --- |
 | public | ✔ | ✔ | ✔ | ✔ |
@@ -1111,6 +1498,38 @@ class SubClass extends MyClass {
 ## III. Lập trình đa luồng (Multithreading)
 
 ### 10. Đồng bộ hóa (Synchronization)
+
+```mermaid
+flowchart TD
+    A["Synchronization in Java"] --> B["Synchronized Methods"]
+    A --> C["Synchronized Blocks"]
+    A --> D["Static Synchronization"]
+    
+    B --> B1["synchronized method() {...}"]
+    B --> B2["Lock: this object"]
+    B --> B3["Entire method protected"]
+    
+    C --> C1["synchronized(object) {...}"]
+    C --> C2["Lock: specified object"]
+    C --> C3["Only block protected"]
+    
+    D --> D1["synchronized static method()"]
+    D --> D2["Lock: Class object"]
+    D --> D3["Class-level locking"]
+    
+    E["Thread Safety Issues"] --> F["Race Condition"]
+    E --> G["Data Inconsistency"]
+    E --> H["Deadlock"]
+    
+    I["Solutions"] --> J["synchronized keyword"]
+    I --> K["volatile keyword"]
+    I --> L["Concurrent Collections"]
+    I --> M["Atomic Classes"]
+    
+    style A fill:#e1f5fe
+    style E fill:#ffebee
+    style I fill:#e8f5e8
+```
 
 #### 10.1. Mục tiêu và cơ chế của Synchronization
 
@@ -1445,6 +1864,43 @@ public class ConcurrentCollectionPerformance {
 
 ### 11. Thread (Luồng)
 
+```mermaid
+stateDiagram-v2
+    [*] --> NEW : Thread created
+    NEW --> RUNNABLE : start()
+    
+    RUNNABLE --> BLOCKED : Waiting for lock
+    BLOCKED --> RUNNABLE : Lock acquired
+    
+    RUNNABLE --> WAITING : wait(), join(), park()
+    WAITING --> RUNNABLE : notify(), notifyAll(), unpark()
+    
+    RUNNABLE --> TIMED_WAITING : sleep(), wait(timeout), join(timeout)
+    TIMED_WAITING --> RUNNABLE : Timeout or interrupt
+    
+    RUNNABLE --> TERMINATED : run() completes
+    BLOCKED --> TERMINATED : Exception
+    WAITING --> TERMINATED : Exception
+    TIMED_WAITING --> TERMINATED : Exception
+    
+    TERMINATED --> [*]
+    
+    note right of NEW
+        Thread object created
+        but start() not called
+    end note
+    
+    note right of RUNNABLE
+        Ready to run or
+        currently running
+    end note
+    
+    note right of BLOCKED
+        Waiting for
+        monitor lock
+    end note
+```
+
 #### 11.1. Các trạng thái của `Thread`
 
 Một luồng trong Java có thể ở một trong sáu trạng thái sau:
@@ -1561,6 +2017,29 @@ public class ThreadStatesExample {
 
 #### 11.2. Phân biệt `Concurrency` và `Multithreading`
 
+```mermaid
+flowchart TD
+    A["Concurrency vs Multithreading"] --> B["Concurrency"]
+    A --> C["Multithreading"]
+    
+    B --> B1["Concept: Dealing with<br>multiple tasks at once"]
+    B --> B2["Can be achieved with<br>single or multiple threads"]
+    B --> B3["Focus: Task management<br>and coordination"]
+    B --> B4["Examples:<br>- Event-driven programming<br>- Reactive systems<br>- Task queues"]
+    
+    C --> C1["Technique: Using<br>multiple threads"]
+    C --> C2["Always uses<br>multiple threads"]
+    C --> C3["Focus: Parallel execution<br>on multiple cores"]
+    C --> C4["Examples:<br>- Thread pools<br>- Fork-Join framework<br>- Parallel streams"]
+    
+    D["Relationship"] --> E["Multithreading is one way<br>to achieve concurrency"]
+    D --> F["Concurrency can exist<br>without multithreading"]
+    
+    style B fill:#e3f2fd
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+```
+
 | Đặc điểm | Concurrency | Multithreading |
 | --- | --- | --- |
 | Định nghĩa | Khả năng xử lý nhiều tác vụ cùng lúc | Kỹ thuật thực thi nhiều luồng trên một CPU |
@@ -1670,6 +2149,39 @@ public class MultithreadingExample {
 ## IV. File và I/O trong Java
 
 ### 12. File và I/O
+
+```mermaid
+flowchart TD
+    A["Java I/O API"] --> B["File Operations"]
+    A --> C["Stream API"]
+    A --> D["NIO API (Java 7+)"]
+    
+    B --> B1["File class"]
+    B --> B2["Create/Delete files"]
+    B --> B3["Directory operations"]
+    
+    C --> C1["Input Streams"]
+    C --> C2["Output Streams"]
+    C --> C3["Readers/Writers"]
+    
+    C1 --> C1a["InputStream<br>FileInputStream<br>BufferedInputStream"]
+    C2 --> C2a["OutputStream<br>FileOutputStream<br>BufferedOutputStream"]
+    C3 --> C3a["Reader/Writer<br>FileReader/FileWriter<br>BufferedReader/BufferedWriter"]
+    
+    D --> D1["Path interface"]
+    D --> D2["Files utility class"]
+    D --> D3["WatchService"]
+    D --> D4["Memory-mapped files"]
+    
+    E["Best Practices"] --> E1["Use try-with-resources"]
+    E --> E2["Choose appropriate buffer size"]
+    E --> E3["Prefer NIO.2 for new code"]
+    E --> E4["Handle IOException properly"]
+    
+    style C fill:#e3f2fd
+    style D fill:#e8f5e8
+    style E fill:#fff3e0
+```
 
 #### 12.1. Cơ bản về `File`, `InputStream`, `Reader`
 
@@ -2021,6 +2533,45 @@ public class FindLargeFiles {
 ## V. Quản lý Exception (Ngoại lệ) trong Java
 
 ### 13. Xử lý Exception
+
+```mermaid
+flowchart TD
+    A["Exception Hierarchy"] --> B["Throwable"]
+    
+    B --> C["Error"]
+    B --> D["Exception"]
+    
+    C --> C1["VirtualMachineError"]
+    C --> C2["OutOfMemoryError"]
+    C --> C3["StackOverflowError"]
+    
+    D --> D1["Checked Exceptions"]
+    D --> D2["Unchecked Exceptions"]
+    
+    D1 --> D1a["IOException"]
+    D1 --> D1b["SQLException"]
+    D1 --> D1c["ClassNotFoundException"]
+    
+    D2 --> D2a["RuntimeException"]
+    
+    D2a --> D2a1["NullPointerException"]
+    D2a --> D2a2["IllegalArgumentException"]
+    D2a --> D2a3["ArrayIndexOutOfBoundsException"]
+    
+    E["Exception Handling"] --> E1["try-catch"]
+    E --> E2["try-catch-finally"]
+    E --> E3["try-with-resources"]
+    E --> E4["throws declaration"]
+    
+    F["Best Practices"] --> F1["Catch specific exceptions"]
+    F --> F2["Don't ignore exceptions"]
+    F --> F3["Use finally for cleanup"]
+    F --> F4["Create custom exceptions"]
+    
+    style C fill:#ffcdd2
+    style D1 fill:#fff9c4
+    style D2 fill:#f3e5f5
+```
 
 #### 13.1. Tổng quan về Exception và cơ chế xử lý
 
@@ -2405,6 +2956,44 @@ class TextFileHandler extends FileHandler {
 
 ### 14. Hibernate Annotations
 
+```mermaid
+flowchart TD
+    A["Hibernate Annotations"] --> B["Entity Mapping"]
+    A --> C["Relationship Mapping"]
+    A --> D["Advanced Features"]
+    
+    B --> B1["@Entity"]
+    B --> B2["@Table"]
+    B --> B3["@Id"]
+    B --> B4["@GeneratedValue"]
+    B --> B5["@Column"]
+    
+    C --> C1["@OneToOne"]
+    C --> C2["@OneToMany"]
+    C --> C3["@ManyToOne"]
+    C --> C4["@ManyToMany"]
+    C --> C5["@JoinColumn"]
+    C --> C6["@JoinTable"]
+    
+    D --> D1["@Transient"]
+    D --> D2["@Temporal"]
+    D --> D3["@Lob"]
+    D --> D4["@Embeddable/@Embedded"]
+    D --> D5["@OrderBy"]
+    
+    E["Fetch Types"] --> E1["FetchType.LAZY"]
+    E --> E2["FetchType.EAGER"]
+    
+    F["Cascade Types"] --> F1["CascadeType.PERSIST"]
+    F --> F2["CascadeType.MERGE"]
+    F --> F3["CascadeType.REMOVE"]
+    F --> F4["CascadeType.ALL"]
+    
+    style B fill:#e3f2fd
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+```
+
 #### 14.1. Các loại annotation trong Hibernate
 
 **1. Entity Mapping Annotations**
@@ -2526,6 +3115,42 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 ```
 
 ### 15. Date and Time API
+
+```mermaid
+flowchart TD
+    A["java.time API (Java 8+)"] --> B["Date/Time Classes"]
+    A --> C["Duration/Period"]
+    A --> D["Formatting"]
+    
+    B --> B1["LocalDate<br>(Date only)"]
+    B --> B2["LocalTime<br>(Time only)"]
+    B --> B3["LocalDateTime<br>(Date + Time)"]
+    B --> B4["ZonedDateTime<br>(Date + Time + Zone)"]
+    B --> B5["Instant<br>(Timestamp)"]
+    
+    C --> C1["Duration<br>(Time-based amount)"]
+    C --> C2["Period<br>(Date-based amount)"]
+    
+    D --> D1["DateTimeFormatter"]
+    D --> D2["Predefined formats"]
+    D --> D3["Custom patterns"]
+    
+    E["Key Benefits"] --> E1["Immutable"]
+    E --> E2["Thread-safe"]
+    E --> E3["Clear API"]
+    E --> E4["Better timezone support"]
+    
+    F["Old API (Deprecated)"] --> F1["java.util.Date"]
+    F --> F2["java.util.Calendar"]
+    F --> F3["SimpleDateFormat"]
+    
+    G["Conversion"] --> G1["Date ↔ Instant"]
+    G --> G2["Calendar ↔ ZonedDateTime"]
+    
+    style A fill:#e8f5e8
+    style E fill:#e3f2fd
+    style F fill:#ffcdd2
+```
 
 **1. Giới thiệu về java.time API**
 
@@ -2771,6 +3396,50 @@ public class BusinessDayCalculator {
 
 ### 16. Stream API và Java Reflection
 
+```mermaid
+flowchart TD
+    A["Stream API"] --> B["Source"]
+    A --> C["Intermediate Operations"]
+    A --> D["Terminal Operations"]
+    
+    B --> B1["Collections"]
+    B --> B2["Arrays"]
+    B --> B3["I/O channels"]
+    
+    C --> C1["filter()"]
+    C --> C2["map()"]
+    C --> C3["sorted()"]
+    C --> C4["distinct()"]
+    C --> C5["limit()"]
+    
+    D --> D1["forEach()"]
+    D --> D2["collect()"]
+    D --> D3["reduce()"]
+    D --> D4["count()"]
+    D --> D5["findFirst()"]
+    
+    E["Java Reflection"] --> F["Core Classes"]
+    E --> G["Use Cases"]
+    E --> H["Considerations"]
+    
+    F --> F1["Class"]
+    F --> F2["Method"]
+    F --> F3["Field"]
+    F --> F4["Constructor"]
+    
+    G --> G1["Frameworks (Spring, Hibernate)"]
+    G --> G2["Testing libraries"]
+    G --> G3["Serialization"]
+    G --> G4["Dynamic proxies"]
+    
+    H --> H1["Performance overhead"]
+    H --> H2["Security concerns"]
+    H --> H3["Breaks encapsulation"]
+    
+    style A fill:#e3f2fd
+    style E fill:#f3e5f5
+```
+
 #### 16.1. Tổng quan về `Stream API`
 
 **1. Giới thiệu về Stream API**
@@ -2865,6 +3534,7 @@ public class StreamBasicExamples {
 ```java
 import java.util.*;
 import java.util.stream.*;
+import java.util.function.Function;
 import static java.util.stream.Collectors.*;
 
 public class StreamCollectorsExamples {
@@ -3262,6 +3932,48 @@ public class ReflectionDIExample {
 
 ### 17. Regular Expressions (Biểu thức chính quy)
 
+```mermaid
+flowchart TD
+    A["Regular Expressions"] --> B["Basic Components"]
+    A --> C["Character Classes"]
+    A --> D["Quantifiers"]
+    A --> E["Anchors"]
+    
+    B --> B1[". (any character)"]
+    B --> B2["\d (digit)"]
+    B --> B3["\w (word character)"]
+    B --> B4["\s (whitespace)"]
+    
+    C --> C1["[abc] (any of a,b,c)"]
+    C --> C2["[^abc] (not a,b,c)"]
+    C --> C3["[a-z] (range)"]
+    C --> C4["[A-Z0-9] (multiple ranges)"]
+    
+    D --> D1["* (0 or more)"]
+    D --> D2["+ (1 or more)"]
+    D --> D3["? (0 or 1)"]
+    D --> D4["{n} (exactly n)"]
+    D --> D5["{n,m} (n to m)"]
+    
+    E --> E1["^ (start of string)"]
+    E --> E2["$ (end of string)"]
+    E --> E3["\b (word boundary)"]
+    
+    F["Java Regex Classes"] --> F1["Pattern"]
+    F --> F2["Matcher"]
+    F --> F3["String methods"]
+    
+    G["Common Use Cases"] --> G1["Email validation"]
+    G --> G2["Phone number"]
+    G --> G3["Password strength"]
+    G --> G4["Data extraction"]
+    G --> G5["Input sanitization"]
+    
+    style A fill:#e1f5fe
+    style F fill:#e8f5e8
+    style G fill:#fff3e0
+```
+
 **1. Giới thiệu về Regular Expressions**
 
 Biểu thức chính quy (Regular Expressions - regex) là một chuỗi ký tự định nghĩa mẫu tìm kiếm, được sử dụng để tìm kiếm, thay thế hoặc phân tích chuỗi.
@@ -3545,3 +4257,526 @@ boolean isValid = matcher.matches();
 // Xấu: Compile pattern mỗi lần sử dụng
 boolean isValid = email.matches(EMAIL_REGEX);
 ```
+
+---
+
+## VII. Các khái niệm bổ sung quan trọng
+
+### 18. Generics và Type Safety
+
+```mermaid
+flowchart TD
+    A["Generics in Java"] --> B["Generic Classes"]
+    A --> C["Generic Methods"]
+    A --> D["Wildcards"]
+    A --> E["Bounded Types"]
+    
+    B --> B1["List&lt;T&gt;"]
+    B --> B2["Map&lt;K,V&gt;"]
+    B --> B3["Custom&lt;T&gt;"]
+    
+    C --> C1["&lt;T&gt; T method(T param)"]
+    C --> C2["&lt;T extends Number&gt; void method(T param)"]
+    
+    D --> D1["? (unbounded)"]
+    D --> D2["? extends T (upper bound)"]
+    D --> D3["? super T (lower bound)"]
+    
+    E --> E1["&lt;T extends Number&gt;"]
+    E --> E2["&lt;T implements Comparable&gt;"]
+    E --> E3["&lt;T extends Class &amp; Interface&gt;"]
+    
+    F["Benefits"] --> F1["Compile-time type checking"]
+    F --> F2["Eliminates casting"]
+    F --> F3["Better code readability"]
+    F --> F4["Type-safe collections"]
+    
+    G["Type Erasure"] --> G1["Runtime type information lost"]
+    G --> G2["Backward compatibility"]
+    G --> G3["Bridge methods created"]
+    
+    H["PECS Principle"] --> H1["Producer Extends"]
+    H --> H2["Consumer Super"]
+    
+    style A fill:#e3f2fd
+    style F fill:#e8f5e8
+    style G fill:#ffecb3
+```
+
+#### 18.1. Tổng quan về Generics
+
+**Generics** được giới thiệu từ Java 5 để cung cấp type safety tại compile-time và loại bỏ việc ép kiểu không cần thiết.
+
+**Ưu điểm:**
+- Type safety tại compile-time
+- Loại bỏ explicit casting
+- Code rõ ràng và dễ đọc hơn
+- Hiệu suất tốt hơn
+
+```java
+// Trước Java 5 (Raw Types)
+List list = new ArrayList();
+list.add("Hello");
+String str = (String) list.get(0); // Cần ép kiểu
+
+// Với Generics (Java 5+)
+List<String> list = new ArrayList<String>();
+list.add("Hello");
+String str = list.get(0); // Không cần ép kiểu
+```
+
+#### 18.2. Bounded Type Parameters
+
+```java
+// Upper bound
+class NumberProcessor<T extends Number> {
+    public double processNumber(T number) {
+        return number.doubleValue();
+    }
+}
+
+// Multiple bounds
+class Processor<T extends Number & Comparable<T>> {
+    public T max(T a, T b) {
+        return a.compareTo(b) > 0 ? a : b;
+    }
+}
+
+// Lower bound (wildcards)
+List<? super Integer> list = new ArrayList<Number>();
+```
+
+#### 18.3. Generic Methods và Wildcards
+
+```java
+public class GenericUtils {
+    // Generic method
+    public static <T> void swap(T[] array, int i, int j) {
+        T temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    
+    // Wildcard với upper bound
+    public static double sumOfList(List<? extends Number> list) {
+        double sum = 0.0;
+        for (Number num : list) {
+            sum += num.doubleValue();
+        }
+        return sum;
+    }
+    
+    // Wildcard với lower bound
+    public static void addNumbers(List<? super Integer> list) {
+        list.add(1);
+        list.add(2);
+        list.add(3);
+    }
+}
+```
+
+### 19. Annotations và Metadata
+
+```mermaid
+flowchart TD
+    A["Java Annotations"] --> B["Built-in Annotations"]
+    A --> C["Meta-annotations"]
+    A --> D["Custom Annotations"]
+    
+    B --> B1["@Override"]
+    B --> B2["@Deprecated"]
+    B --> B3["@SuppressWarnings"]
+    B --> B4["@SafeVarargs"]
+    B --> B5["@FunctionalInterface"]
+    
+    C --> C1["@Retention"]
+    C --> C2["@Target"]
+    C --> C3["@Documented"]
+    C --> C4["@Inherited"]
+    C --> C5["@Repeatable"]
+    
+    D --> D1["Custom business annotations"]
+    D --> D2["Framework annotations"]
+    D --> D3["Validation annotations"]
+    
+    E["Retention Policies"] --> E1["SOURCE (compile-time only)"]
+    E --> E2["CLASS (bytecode, not runtime)"]
+    E --> E3["RUNTIME (available at runtime)"]
+    
+    F["Target Types"] --> F1["TYPE (class, interface)"]
+    F --> F2["METHOD"]
+    F --> F3["FIELD"]
+    F --> F4["PARAMETER"]
+    F --> F5["CONSTRUCTOR"]
+    
+    G["Processing"] --> G1["Compile-time processing"]
+    G --> G2["Runtime reflection"]
+    G --> G3["Code generation"]
+    
+    style B fill:#e3f2fd
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+```
+
+#### 19.1. Built-in Annotations
+
+| Annotation | Mô tả | Ví dụ |
+| --- | --- | --- |
+| `@Override` | Ghi đè phương thức từ lớp cha | `@Override public String toString()` |
+| `@Deprecated` | Đánh dấu phương thức/lớp không còn được khuyến nghị | `@Deprecated public void oldMethod()` |
+| `@SuppressWarnings` | Tắt cảnh báo compiler | `@SuppressWarnings("unchecked")` |
+| `@FunctionalInterface` | Đánh dấu interface chỉ có một abstract method | `@FunctionalInterface interface Processor` |
+| `@SafeVarargs` | Tắt cảnh báo về varargs với generics | `@SafeVarargs public final void method(List<String>... lists)` |
+
+#### 19.2. Custom Annotations
+
+```java
+// Định nghĩa annotation
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Benchmark {
+    String value() default "";
+    int iterations() default 1;
+}
+
+// Sử dụng annotation
+class Calculator {
+    @Benchmark(value = "Addition test", iterations = 1000)
+    public int add(int a, int b) {
+        return a + b;
+    }
+}
+
+// Xử lý annotation bằng reflection
+public class AnnotationProcessor {
+    public static void processBenchmarks(Object obj) {
+        Method[] methods = obj.getClass().getDeclaredMethods();
+        
+        for (Method method : methods) {
+            if (method.isAnnotationPresent(Benchmark.class)) {
+                Benchmark benchmark = method.getAnnotation(Benchmark.class);
+                System.out.println("Running benchmark: " + benchmark.value());
+                System.out.println("Iterations: " + benchmark.iterations());
+                
+                // Thực thi benchmark
+                long startTime = System.nanoTime();
+                for (int i = 0; i < benchmark.iterations(); i++) {
+                    try {
+                        method.invoke(obj, 5, 3);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                long endTime = System.nanoTime();
+                System.out.println("Average time: " + (endTime - startTime) / benchmark.iterations() + " ns");
+            }
+        }
+    }
+}
+```
+
+### 20. Lambda Expressions và Functional Programming
+
+```mermaid
+flowchart TD
+    A["Lambda Expressions"] --> B["Syntax"]
+    A --> C["Functional Interfaces"]
+    A --> D["Method References"]
+    
+    B --> B1["() -> expression"]
+    B --> B2["(param) -> expression"]
+    B --> B3["(param1, param2) -> { statements }"]
+    
+    C --> C1["Predicate&lt;T&gt;"]
+    C --> C2["Function&lt;T,R&gt;"]
+    C --> C3["Consumer&lt;T&gt;"]
+    C --> C4["Supplier&lt;T&gt;"]
+    C --> C5["Custom @FunctionalInterface"]
+    
+    D --> D1["Static method: Class::method"]
+    D --> D2["Instance method: object::method"]
+    D --> D3["Constructor: Class::new"]
+    D --> D4["Array constructor: int[]::new"]
+    
+    E["Benefits"] --> E1["More concise code"]
+    E --> E2["Functional programming style"]
+    E --> E3["Better with collections"]
+    E --> E4["Parallel processing"]
+    
+    F["Use Cases"] --> F1["Stream operations"]
+    F --> F2["Event handling"]
+    F --> F3["Callbacks"]
+    F --> F4["Comparators"]
+    
+    G["Variable Capture"] --> G1["Effectively final"]
+    G --> G2["Local variables"]
+    G --> G3["Instance variables"]
+    
+    style A fill:#e1f5fe
+    style E fill:#e8f5e8
+    style F fill:#fff3e0
+```
+
+#### 20.1. Functional Interfaces
+
+```java
+import java.util.function.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// Built-in functional interfaces
+Predicate<String> isEmpty = String::isEmpty;
+Function<String, Integer> stringLength = String::length;
+Consumer<String> printer = System.out::println;
+Supplier<String> supplier = () -> "Hello World";
+
+// Custom functional interface
+@FunctionalInterface
+interface MathOperation {
+    int operate(int a, int b);
+}
+
+// Sử dụng lambda expressions
+MathOperation addition = (a, b) -> a + b;
+MathOperation multiplication = (a, b) -> a * b;
+
+int result1 = addition.operate(5, 3); // 8
+int result2 = multiplication.operate(5, 3); // 15
+```
+
+#### 20.2. Method References
+
+```java
+// Các loại method references
+List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+
+// Static method reference
+names.forEach(System.out::println);
+
+// Instance method reference
+names.stream().map(String::toUpperCase).collect(Collectors.toList());
+
+// Constructor reference
+List<String> copied = names.stream().collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+
+// Method reference với object instance
+PrintStream out = System.out;
+names.forEach(out::println);
+```
+
+### 21. Optional và Null Safety
+
+```mermaid
+flowchart TD
+    A["Optional&lt;T&gt;"] --> B["Creation Methods"]
+    A --> C["Query Methods"]
+    A --> D["Conditional Actions"]
+    A --> E["Transformation"]
+    
+    B --> B1["Optional.of(value)"]
+    B --> B2["Optional.ofNullable(value)"]
+    B --> B3["Optional.empty()"]
+    
+    C --> C1["isPresent()"]
+    C --> C2["isEmpty() (Java 11+)"]
+    C --> C3["get() (avoid if possible)"]
+    
+    D --> D1["ifPresent(consumer)"]
+    D --> D2["ifPresentOrElse(consumer, runnable)"]
+    D --> D3["orElse(defaultValue)"]
+    D --> D4["orElseGet(supplier)"]
+    D --> D5["orElseThrow()"]
+    
+    E --> E1["map(function)"]
+    E --> E2["flatMap(function)"]
+    E --> E3["filter(predicate)"]
+    
+    F["Benefits"] --> F1["Null safety"]
+    F --> F2["Explicit optionality"]
+    F --> F3["Functional style"]
+    F --> F4["Prevents NullPointerException"]
+    
+    G["Best Practices"] --> G1["Never call get() without check"]
+    G --> G2["Use orElse for simple defaults"]
+    G --> G3["Use orElseGet for expensive operations"]
+    G --> G4["Don't use Optional in fields"]
+    G --> G5["Return Optional from methods"]
+    
+    H["Anti-patterns"] --> H1["Optional.of(null)"]
+    H --> H2["if (optional.isPresent()) get()"]
+    H --> H3["Optional as field type"]
+    
+    style A fill:#e3f2fd
+    style F fill:#e8f5e8
+    style H fill:#ffcdd2
+```
+
+#### 21.1. Optional Class
+
+```java
+import java.util.Optional;
+
+public class OptionalExample {
+    // Helper method for demonstration
+    private static String getString() {
+        return Math.random() > 0.5 ? "Hello" : null;
+    }
+    
+    public static void main(String[] args) {
+        // Tạo Optional
+        Optional<String> optional1 = Optional.of("Hello");
+        Optional<String> optional2 = Optional.ofNullable(getString());
+        Optional<String> optional3 = Optional.empty();
+
+// Kiểm tra và lấy giá trị
+if (optional1.isPresent()) {
+    System.out.println(optional1.get());
+}
+
+// Các phương thức tiện ích
+optional1.ifPresent(System.out::println);
+String value = optional2.orElse("Default");
+String value2 = optional2.orElseGet(() -> "Generated default");
+String value3 = optional2.orElseThrow(() -> new RuntimeException("No value"));
+
+// Chaining operations
+Optional<String> result = optional1
+    .filter(s -> s.length() > 3)
+    .map(String::toUpperCase)
+    .flatMap(s -> Optional.of(s + "!"));
+    }
+}
+```
+
+#### 21.2. Best Practices với Optional
+
+```java
+import java.util.Optional;
+
+// Helper classes for demonstration
+class User {
+    private boolean active;
+    private String email;
+    
+    public boolean isActive() { return active; }
+    public String getEmail() { return email; }
+}
+
+class Database {
+    public User findById(Long id) { return new User(); }
+}
+
+class Config {
+    public String get(String key) { return "config_value"; }
+}
+
+class EmailService {
+    public void sendWelcomeEmail(String email) { /* implementation */ }
+}
+
+public class OptionalBestPractices {
+    private Database database = new Database();
+    private Config config = new Config();
+    private EmailService emailService = new EmailService();
+    // ĐÚNG: Trả về Optional thay vì null
+    public Optional<User> findUserById(Long id) {
+        User user = database.findById(id);
+        return Optional.ofNullable(user);
+    }
+    
+    // SAI: Không sử dụng Optional cho fields
+    // private Optional<String> name; // Không nên
+    
+    // ĐÚNG: Sử dụng Optional cho return type
+    public Optional<String> getConfigValue(String key) {
+        return Optional.ofNullable(config.get(key));
+    }
+    
+    // ĐÚNG: Xử lý Optional một cách functional
+    public void processUser(Long userId) {
+        findUserById(userId)
+            .filter(User::isActive)
+            .map(User::getEmail)
+            .ifPresent(emailService::sendWelcomeEmail);
+    }
+}
+```
+
+### 22. Modules (Java 9+)
+
+```mermaid
+flowchart TD
+    A["Java Module System (JPMS)"] --> B["Module Declaration"]
+    A --> C["Module Directives"]
+    A --> D["Benefits"]
+    
+    B --> B1["module-info.java"]
+    B --> B2["Module name"]
+    B --> B3["Module path"]
+    
+    C --> C1["requires"]
+    C --> C2["exports"]
+    C --> C3["opens"]
+    C --> C4["provides...with"]
+    C --> C5["uses"]
+    
+    C1 --> C1a["requires java.base (automatic)"]
+    C1 --> C1b["requires transitive"]
+    C1 --> C1c["requires static"]
+    
+    C2 --> C2a["exports package"]
+    C2 --> C2b["exports package to module"]
+    
+    C3 --> C3a["opens package (reflection)"]
+    C3 --> C3b["opens package to module"]
+    
+    D --> D1["Strong encapsulation"]
+    D --> D2["Reliable configuration"]
+    D --> D3["Scalable system"]
+    D --> D4["Better performance"]
+    D --> D5["Reduced memory footprint"]
+    
+    E["Module Types"] --> E1["Named modules"]
+    E --> E2["Automatic modules"]
+    E --> E3["Unnamed modules"]
+    
+    F["Migration Strategy"] --> F1["Bottom-up approach"]
+    F --> F2["Top-down approach"]
+    F --> F3["Use automatic modules"]
+    F --> F4["Gradual migration"]
+    
+    style A fill:#e1f5fe
+    style D fill:#e8f5e8
+    style F fill:#fff3e0
+```
+
+#### 22.1. Module System
+
+```java
+// module-info.java
+module com.example.myapp {
+    requires java.base;
+    requires java.sql;
+    requires transitive java.desktop;
+    
+    exports com.example.myapp.api;
+    exports com.example.myapp.util to com.example.myapp.impl;
+    
+    provides com.example.myapp.api.Service 
+        with com.example.myapp.impl.ServiceImpl;
+    
+    uses com.example.myapp.api.Logger;
+}
+```
+
+#### 22.2. Module Directives
+
+| Directive | Mô tả | Ví dụ |
+| --- | --- | --- |
+| `requires` | Khai báo dependency | `requires java.sql;` |
+| `requires transitive` | Dependency được export cho modules khác | `requires transitive java.desktop;` |
+| `exports` | Export package cho modules khác | `exports com.example.api;` |
+| `exports...to` | Export package cho modules cụ thể | `exports com.example.internal to com.example.impl;` |
+| `opens` | Cho phép reflection access | `opens com.example.model;` |
+| `uses` | Sử dụng service | `uses com.example.api.Service;` |
+| `provides...with` | Cung cấp service implementation | `provides Service with ServiceImpl;` |
