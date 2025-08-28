@@ -1,7 +1,7 @@
 - [I. Khái niệm cơ bản về lập trình hướng đối tượng (OOP)](#i-khái-niệm-cơ-bản-về-lập-trình-hướng-đối-tượng-oop)
   - [1. Kế thừa và Ghi đè (Inheritance and Overriding)](#1-kế-thừa-và-ghi-đè-inheritance-and-overriding)
     - [1.1. Phân biệt kế thừa và ghi đè áp dụng với thuộc tính và phương thức `final`, `static`, `private`, `Constructors`:](#11-phân-biệt-kế-thừa-và-ghi-đè-áp-dụng-với-thuộc-tính-và-phương-thức-final-static-private-constructors)
-    - [1.2. Kế thừa với `class final`](#12-kế-thừa-với-class-final)
+    - [Bẫy thường gặp trong Kế thừa và Ghi Đè](#bẫy-thường-gặp-trong-kế-thừa-và-ghi-đè)
     - [1.3. So sánh giữa quan hệ Is-A và Has-A](#13-so-sánh-giữa-quan-hệ-is-a-và-has-a)
   - [2. Phân biệt đa hình và ghi đè](#2-phân-biệt-đa-hình-và-ghi-đè)
     - [1. Ghi đè (Overriding)](#1-ghi-đè-overriding)
@@ -18,8 +18,11 @@
     - [4.3. Set Interface (HashSet, LinkedHashSet, TreeSet)](#43-set-interface-hashset-linkedhashset-treeset)
     - [4.4. Map Interface (HashMap, LinkedHashMap, TreeMap)](#44-map-interface-hashmap-linkedhashmap-treemap)
     - [4.4.1. Cơ chế đồng bộ hóa của Map](#441-cơ-chế-đồng-bộ-hóa-của-map)
-    - [4.5. Bảng so sánh `List`, `Set`, `Map`](#45-bảng-so-sánh-list-set-map)
+  - [4.6. Fail-fast Iterators và Đồng bộ hóa](#46-fail-fast-iterators-và-đồng-bộ-hóa)
+    - [Bẫy thường gặp trong Collections](#bẫy-thường-gặp-trong-collections)
+    - [Bảng so sánh `List`, `Set`, `Map`](#bảng-so-sánh-list-set-map)
   - [5. Phân biệt `String`, `StringBuilder`, và `StringBuffer`](#5-phân-biệt-string-stringbuilder-và-stringbuffer)
+    - [Bẫy thường gặp với String và Unicode](#bẫy-thường-gặp-với-string-và-unicode)
   - [6. Lớp lồng nhau (Nested Class)](#6-lớp-lồng-nhau-nested-class)
     - [1. Static Nested Class](#1-static-nested-class)
     - [2. Inner Class (Non-static Nested Class)](#2-inner-class-non-static-nested-class)
@@ -42,6 +45,8 @@
     - [10.5. Đồng bộ hóa của `Collection` (`Map`, `Set`)](#105-đồng-bộ-hóa-của-collection-map-set)
   - [11. Thread (Luồng)](#11-thread-luồng)
     - [11.1. Các trạng thái của `Thread`](#111-các-trạng-thái-của-thread)
+    - [Happens-before và Java Memory Model (JMM)](#happens-before-và-java-memory-model-jmm)
+    - [Bẫy thường gặp trong Đa luồng](#bẫy-thường-gặp-trong-đa-luồng)
     - [11.2. Phân biệt `Concurrency` và `Multithreading`](#112-phân-biệt-concurrency-và-multithreading)
 - [IV. File và I/O trong Java](#iv-file-và-io-trong-java)
   - [12. File và I/O](#12-file-và-io)
@@ -54,16 +59,29 @@
 - [VI. Các khái niệm nâng cao trong Java](#vi-các-khái-niệm-nâng-cao-trong-java)
   - [14. Hibernate Annotations](#14-hibernate-annotations)
     - [14.1. Các loại annotation trong Hibernate](#141-các-loại-annotation-trong-hibernate)
+    - [Bẫy thường gặp với JPA/Hibernate](#bẫy-thường-gặp-với-jpahibernate)
   - [15. Date and Time API](#15-date-and-time-api)
+    - [Bẫy thường gặp với Date \& Time API](#bẫy-thường-gặp-với-date--time-api)
   - [16. Stream API và Java Reflection](#16-stream-api-và-java-reflection)
     - [16.1. Tổng quan về `Stream API`](#161-tổng-quan-về-stream-api)
+    - [Bẫy thường gặp với Stream API](#bẫy-thường-gặp-với-stream-api)
     - [16.2. Java Reflection](#162-java-reflection)
   - [17. Regular Expressions (Biểu thức chính quy)](#17-regular-expressions-biểu-thức-chính-quy)
+  - [**Bẫy thường gặp (Common Pitfalls) với Regular Expressions**](#bẫy-thường-gặp-common-pitfalls-với-regular-expressions)
+    - [**Bẫy 1: Catastrophic Backtracking**](#bẫy-1-catastrophic-backtracking)
+    - [**Bẫy 2: Possessive Quantifiers và Atomic Groups**](#bẫy-2-possessive-quantifiers-và-atomic-groups)
+    - [**Bẫy 3: Lookahead và Lookbehind Assertions**](#bẫy-3-lookahead-và-lookbehind-assertions)
+    - [**Bẫy 4: Unicode và Character Classes**](#bẫy-4-unicode-và-character-classes)
+    - [**Bẫy 5: Flags và Mode Modifiers**](#bẫy-5-flags-và-mode-modifiers)
+    - [**Bẫy 6: Performance và Memory Issues**](#bẫy-6-performance-và-memory-issues)
+    - [**Bẫy 7: Thread Safety**](#bẫy-7-thread-safety)
+    - [**Tóm tắt Best Practices cho Regular Expressions**](#tóm-tắt-best-practices-cho-regular-expressions)
 - [VII. Các khái niệm bổ sung quan trọng](#vii-các-khái-niệm-bổ-sung-quan-trọng)
   - [18. Generics và Type Safety](#18-generics-và-type-safety)
     - [18.1. Tổng quan về Generics](#181-tổng-quan-về-generics)
     - [18.2. Bounded Type Parameters](#182-bounded-type-parameters)
     - [18.3. Generic Methods và Wildcards](#183-generic-methods-và-wildcards)
+    - [Bẫy thường gặp với Generics](#bẫy-thường-gặp-với-generics)
   - [19. Annotations và Metadata](#19-annotations-và-metadata)
     - [19.1. Built-in Annotations](#191-built-in-annotations)
     - [19.2. Custom Annotations](#192-custom-annotations)
@@ -73,9 +91,11 @@
   - [21. Optional và Null Safety](#21-optional-và-null-safety)
     - [21.1. Optional Class](#211-optional-class)
     - [21.2. Best Practices với Optional](#212-best-practices-với-optional)
+    - [Bẫy thường gặp với Optional](#bẫy-thường-gặp-với-optional)
   - [22. Modules (Java 9+)](#22-modules-java-9)
     - [22.1. Module System](#221-module-system)
     - [22.2. Module Directives](#222-module-directives)
+    - [Bẫy thường gặp với Modules](#bẫy-thường-gặp-với-modules)
 
 
 ## I. Khái niệm cơ bản về lập trình hướng đối tượng (OOP)
@@ -6109,7 +6129,6 @@ class OverloadTrap {
 - **Autoboxing chi phí**: Dùng primitive collections/streams khi cần hiệu suất
 - **Tránh raw types** - luôn dùng parameterized types
 - **Generic overloading**: Type erasure làm method signature giống nhau
-```
 
 ### 19. Annotations và Metadata
 
@@ -6646,7 +6665,6 @@ class OptionalCreationTrap {
 - **Optional không Serializable** - đừng dùng trong entity/DTO
 - **Luôn dùng `orElse*/ifPresent`** thay vì `isPresent() + get()`
 - **Dùng `Optional.ofNullable`** thay vì `Optional.of` với nullable values
-```
 
 ### 22. Modules (Java 9+)
 
