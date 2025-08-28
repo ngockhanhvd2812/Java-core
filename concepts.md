@@ -103,15 +103,16 @@ flowchart TD
 | Loại | Kế thừa (Inheritance) | Ghi đè (Overriding) |
 | --- | --- | --- |
 | Constructors | - Không được kế thừa.<br>- Gọi constructor của lớp cha bằng `super()`. | - Không thể ghi đè.<br>- Constructor của lớp con tách biệt với lớp cha. |
-| Static methods | - Được kế thừa (nếu không `private`).<br>- Thuộc về lớp, không phải đối tượng. | - Không thể ghi đè.<br>- Che giấu (hides) phương thức static của lớp cha. |
+| Static methods | - Được kế thừa (nếu không `private`).<br>- Thuộc về lớp, không phải đối tượng. | - **Không thể ghi đè** (chỉ bị che giấu - hiding).<br>- Static method call được quyết định theo **kiểu tham chiếu** lúc biên dịch (không đa hình). |
 | Final methods | - Được kế thừa (nếu không `private`).<br>- Có thể sử dụng mà không cần định nghĩa lại. | - Không thể ghi đè.<br>- `final` ngăn chặn việc ghi đè. |
-| Private methods | - Không được kế thừa.<br>- Chỉ truy cập trong lớp định nghĩa. | - Không thể ghi đè.<br>- Không thể truy cập từ lớp con. |
+| Private methods | - **Không được kế thừa** (JLS ghi rõ thành viên `private` không thể thừa kế).<br>- Chỉ truy cập trong lớp định nghĩa. | - Không thể ghi đè.<br>- Không thể truy cập từ lớp con. |
 
 (*) Tóm lại:
-- Final: Chỉ kế thừa, không ghi đè
-- Static: Chỉ kế thừa, không ghi đè nhưng che giấu static lớp cha nếu định nghĩa lại ở lớp con
-- Private: Không kế thừa, không ghi đè
-- Constructors: Không kế thừa, không ghi đè, nhưng lớp con có thể gọi constructor của lớp cha thông qua `super()`
+- **Final**: Chỉ kế thừa, không ghi đè
+- **Static**: Chỉ kế thừa, không ghi đè nhưng che giấu static lớp cha nếu định nghĩa lại ở lớp con
+- **Private**: **Không kế thừa, không ghi đè** (private members không được thừa kế theo JLS)
+- **Constructors**: Không kế thừa, không ghi đè, nhưng lớp con có thể gọi constructor của lớp cha thông qua `super()`
+- **Trường (field)**: Không đa hình - truy cập field phụ thuộc **kiểu biên dịch** của tham chiếu, không phải đối tượng runtime
 
 Tương đương với:
 - Chỉ kế thừa với `static` và `final`, còn lại thì không kế thừa với `private`, `Constructors`
@@ -206,6 +207,113 @@ public class Main {
         child.finalMethod(); // Kết quả: Phương thức final của lớp cha.
     }
 }
+```
+
+#### Bẫy thường gặp trong Kế thừa và Ghi Đè
+
+```java
+// Bẫy 1: Gọi static qua biến thể hiện
+class Parent {
+    public static void staticMethod() {
+        System.out.println("Parent static method");
+    }
+}
+
+class Child extends Parent {
+    public static void staticMethod() {
+        System.out.println("Child static method");
+    }
+}
+
+public class StaticTrap {
+    public static void main(String[] args) {
+        Parent p = new Child();
+        p.staticMethod(); // Output: "Parent static method" - KHÔNG phải "Child static method"!
+        
+        // Lý do: Static method call được quyết định theo kiểu tham chiếu (Parent), 
+        // không phải kiểu đối tượng runtime (Child)
+    }
+}
+```
+
+```java
+// Bẫy 2: Nhầm "kế thừa" với "khả kiến"
+class Parent {
+    private void privateMethod() {
+        System.out.println("Parent private method");
+    }
+    
+    protected void testAccess() {
+        privateMethod(); // OK
+    }
+}
+
+class Child extends Parent {
+    public void attemptAccess() {
+        // privateMethod(); // Lỗi biên dịch: private method không được kế thừa!
+        
+        // Thậm chí định nghĩa cùng tên cũng không phải ghi đè:
+        privateMethod(); // Đây là method khác hoàn toàn!
+    }
+    
+    private void privateMethod() {
+        System.out.println("Child private method - completely different method!");
+    }
+}
+```
+
+```java
+// Bẫy 3: Override và ném ngoại lệ
+class Parent {
+    public void method() throws IOException {
+        // some code
+    }
+}
+
+class Child extends Parent {
+    // SAI: Không thể throws checked exception rộng hơn
+    // public void method() throws Exception { } // Lỗi biên dịch!
+    
+    // ĐÚNGG: Thể throws hẹp hơn hoặc không throws
+    @Override
+    public void method() throws FileNotFoundException {
+        // FileNotFoundException là con của IOException
+    }
+    
+    // Hoặc không throws gì cả:
+    // @Override
+    // public void method() { }
+}
+```
+
+```java
+// Bẫy 4: Trường (field) không đa hình
+class Parent {
+    public String message = "Parent message";
+}
+
+class Child extends Parent {
+    public String message = "Child message";
+}
+
+public class FieldTrap {
+    public static void main(String[] args) {
+        Parent p = new Child();
+        System.out.println(p.message); // Output: "Parent message" - KHÔNG phải "Child message"!
+        
+        Child c = (Child) p;
+        System.out.println(c.message); // Output: "Child message"
+        
+        // Trường (field) không có đa hình như method!
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **Private members không được kế thừa** (theo JLS)
+- **Static methods là "hiding", không phải overriding** và được resolve theo kiểu compile-time
+- **Fields không đa hình** - truy cập phụ thuộc kiểu biên dịch
+- **Override với checked exceptions** chỉ được hẹp hơn hoặc bằng parent method
 ```
 
 #### 1.2. Kế thừa với `class final`
@@ -675,7 +783,7 @@ if (!list.isEmpty()) {
 }
 ```
 
-Cách 1 (`removeLast()`) hiệu quả hơn vì LinkedList được triển khai dưới dạng danh sách liên kết đôi, nên việc truy cập vào phần tử cuối là O(1). Trong khi đó, cách 2 cũng có độ phức tạp O(1) nhưng `removeLast()` rõ ràng hơn về mục đích sử dụng.
+Cách 1 (`removeLast()`) hiệu quả hơn vì LinkedList được triển khai dưới dạng danh sách liên kết đôi, nên việc truy cập vào phần tử cuối là O(1). `remove(size-1)` trong triển khai LinkedList của JDK cũng được tối ưu hóa - nó duyệt từ cuối lên nên trong trường hợp này cũng O(1), tuy nhiên nói chung các thao tác theo chỉ số trên LinkedList có độ phức tạp tuyến tính. Sử dụng `removeLast()` rõ ràng hơn về mặt ý định và an toàn hơn về hiệu suất.
 
 #### 4.3. Set Interface (HashSet, LinkedHashSet, TreeSet)
 
@@ -862,12 +970,14 @@ Trong Java, có nhiều cách để tạo Map đồng bộ (thread-safe):
    ```java
    ConcurrentHashMap<String, Integer> concurrentHashMap = new ConcurrentHashMap<>();
    ```
-   - Ưu điểm: Hiệu suất cao, chia nhỏ lock thành nhiều segment, không khóa toàn bộ map
+   - Ưu điểm: Hiệu suất cao, sử dụng CAS và khóa tinh trên từng bucket riêng lẻ (JDK 8+), không khóa toàn bộ map
    - Nhược điểm: Triển khai phức tạp hơn
 
 **So sánh hiệu suất:**
 - ConcurrentHashMap > Hashtable > SynchronizedMap
-- - ConcurrentHashMap trong Java 8+: sử dụng kết hợp CAS và synchronized trên các bucket riêng lẻ (fine-grained locking), tree hóa bucket khi cần. Không còn segment như Java 7.
+- **ConcurrentHashMap JDK 7 vs JDK 8+:**
+  - **JDK 7**: Sử dụng segment-based locking (mặc định 16 segments)
+  - **JDK 8+**: Không còn segment; sử dụng CAS + synchronized trên từng bin/bucket, tree-ification khi collision cao
 
 **Ví dụ sử dụng ConcurrentHashMap:**
 ```java
@@ -901,7 +1011,115 @@ public class ConcurrentMapExample {
   ```
 - ConcurrentHashMap cung cấp các phương thức nguyên tử như `putIfAbsent()`, `compute()`, `merge()` giúp xử lý an toàn trong môi trường đa luồng.
 
-#### 4.5. Bảng so sánh `List`, `Set`, `Map`
+### 4.6. Fail-fast Iterators và Đồng bộ hóa
+
+**Fail-fast Iterators:**
+Hầu hết các collection trong Java (ArrayList, HashMap, HashSet, v.v.) sử dụng fail-fast iterators. Khi cấu trúc collection thay đổi trong khi đang duyệt (ngoại trừ thông qua chính iterator đó), iterator sẽ ném `ConcurrentModificationException`.
+
+```java
+List<String> list = new ArrayList<>(Arrays.asList("A", "B", "C"));
+
+// Lỗi: ConcurrentModificationException
+try {
+    for (String item : list) {
+        if ("B".equals(item)) {
+            list.remove(item); // Thay đổi cấu trúc trong khi duyệt
+        }
+    }
+} catch (ConcurrentModificationException e) {
+    System.out.println("ConcurrentModificationException occurred!");
+}
+
+// Đúng: Sử dụng Iterator.remove()
+Iterator<String> iterator = list.iterator();
+while (iterator.hasNext()) {
+    String item = iterator.next();
+    if ("B".equals(item)) {
+        iterator.remove(); // An toàn
+    }
+}
+```
+
+**ConcurrentHashMap - Weakly Consistent:**
+Khác với fail-fast, ConcurrentHashMap sử dụng weakly consistent iterators - không ném ConcurrentModificationException và có thể thấy một phần cập nhật trong quá trình duyệt.
+
+#### Bẫy thường gặp trong Collections
+
+```java
+// Bẫy 1: subList() là "view" - thay đổi ảnh hưởng list gốc
+List<String> original = new ArrayList<>(Arrays.asList("A", "B", "C", "D"));
+List<String> subList = original.subList(1, 3); // ["B", "C"]
+
+subList.add("X"); // Thay đổi subList
+System.out.println(original); // ["A", "B", "C", "X", "D"] - List gốc bị thay đổi!
+
+// An toàn: Tầo bản sao độc lập
+List<String> safeCopy = new ArrayList<>(original.subList(1, 3));
+safeCopy.add("Y"); // Không ảnh hưởng original
+```
+
+```java
+// Bẫy 2: Arrays.asList() không thể thêm/xóa (kích thước cố định)
+List<String> fixedList = Arrays.asList("A", "B", "C");
+try {
+    fixedList.add("D"); // UnsupportedOperationException!
+} catch (UnsupportedOperationException e) {
+    System.out.println("Cannot add to Arrays.asList()!");
+}
+
+// Đúng: Tạo ArrayList mutable
+List<String> mutableList = new ArrayList<>(Arrays.asList("A", "B", "C"));
+mutableList.add("D"); // OK
+```
+
+```java
+// Bẫy 3: List.of() (Java 9+) bất biến
+List<String> immutableList = List.of("A", "B", "C");
+try {
+    immutableList.add("D"); // UnsupportedOperationException!
+} catch (UnsupportedOperationException e) {
+    System.out.println("List.of() is immutable!");
+}
+```
+
+```java
+// Bẫy 4: HashMap cho phép null key & value, Hashtable không
+Map<String, String> hashMap = new HashMap<>();
+hashMap.put(null, "value"); // OK
+hashMap.put("key", null);   // OK
+
+Map<String, String> hashtable = new Hashtable<>();
+try {
+    hashtable.put(null, "value"); // NullPointerException!
+} catch (NullPointerException e) {
+    System.out.println("Hashtable doesn't allow null!");
+}
+```
+
+```java
+// Bẫy 5: Collectors.toMap với trùng key
+List<String> items = Arrays.asList("apple", "banana", "apple");
+
+try {
+    Map<String, Integer> lengthMap = items.stream()
+        .collect(Collectors.toMap(
+            item -> item,
+            item -> item.length()
+        )); // IllegalStateException: Duplicate key!
+} catch (IllegalStateException e) {
+    System.out.println("Duplicate key error!");
+}
+
+// Đúng: Cung cấp merge function
+Map<String, Integer> lengthMap = items.stream()
+    .collect(Collectors.toMap(
+        item -> item,
+        item -> item.length(),
+        (existing, replacement) -> existing // Giữ giá trị đầu tiên
+    ));
+```
+
+#### Bảng so sánh `List`, `Set`, `Map`
 
 Dưới đây là bảng so sánh với dấu `x` cho những phương thức không được hỗ trợ
 
@@ -965,6 +1183,8 @@ flowchart TD
 - **String**: 
   - Là lớp final, không thể kế thừa
   - Một khi được tạo, giá trị không thể thay đổi (immutable)
+  - **String là UTF-16**: `length()` trả về số *char code unit* (16-bit), **không phải** số *Unicode code point*. Ký tự ngoài BMP (emoji, ký tự Đông Á mở rộng) có thể chiếm 2 `char`
+  - **Toán tử `+`** được biên dịch dùng **`StringBuilder`** - do đó nối chuỗi trong vòng lặp lớn nên dùng `StringBuilder` thủ công để tránh tạo nhiều đối tượng
   - Khi thực hiện các phép nối chuỗi, một đối tượng String mới sẽ được tạo ra
   - Tốt cho các chuỗi không thay đổi nhiều
   - Ví dụ: `String str = "Hello" + " World";` tạo ra 3 đối tượng String
@@ -1039,6 +1259,77 @@ public class StringPerformanceTest {
 }
 ```
 Kết quả thường cho thấy StringBuilder nhanh nhất, tiếp theo là StringBuffer, và String chậm nhất khi thực hiện nhiều thao tác nối chuỗi.
+
+#### Bẫy thường gặp với String và Unicode
+
+```java
+// Bẫy 1: Đếm "kí tự" bằng length() sẽ sai với emoji/ký tự ngoài BMP
+String text = "😀😁😂"; // 3 emoji
+System.out.println("length(): " + text.length()); // Output: 6 (KHÔNG phải 3!)
+System.out.println("codePointCount(): " + text.codePointCount(0, text.length())); // Output: 3
+
+// Cắt chuỗi có thể vỡ surrogate pair
+String broken = text.substring(0, 1); // Chỉ lấy một nửa của emoji đầu tiên!
+System.out.println("Broken: '" + broken + "'"); // Hiển thị ký tự lỗi
+
+// Đúng: Sử dụng codePoints() cho xử lý Unicode chính xác
+text.codePoints()
+    .forEach(codePoint -> System.out.println(Character.toString(codePoint)));
+```
+
+```java
+// Bẫy 2: So sánh String dùng == thay vì equals()
+String str1 = new String("Hello");
+String str2 = new String("Hello");
+String str3 = "Hello";
+String str4 = "Hello";
+
+System.out.println(str1 == str2);    // false - khác địa chỉ
+ System.out.println(str1.equals(str2)); // true - cùng nội dung
+System.out.println(str3 == str4);    // true - string pool
+```
+
+```java
+// Bẫy 3: Xử lý null với String
+String nullString = null;
+try {
+    System.out.println(nullString.length()); // NullPointerException!
+} catch (NullPointerException e) {
+    System.out.println("NPE khi gọi method trên null!");
+}
+
+// An toàn hơn:
+if (nullString != null && nullString.length() > 0) {
+    // Xử lý
+}
+
+// Hoặc dùng Optional (Java 8+):
+Optional.ofNullable(nullString)
+    .filter(s -> !s.isEmpty())
+    .ifPresent(s -> System.out.println("Length: " + s.length()));
+```
+
+```java
+// Bẫy 4: String concatenation trong vòng lặp
+// SAI - tạo nhiều đối tượng String
+String result = "";
+for (int i = 0; i < 1000; i++) {
+    result += "item" + i; // Tạo mới StringBuilder mỗi lần!
+}
+
+// ĐÚNG - dùng StringBuilder
+StringBuilder sb = new StringBuilder();
+for (int i = 0; i < 1000; i++) {
+    sb.append("item").append(i);
+}
+String result2 = sb.toString();
+```
+
+**Nguyên tắc quan trọng:**
+- **`String.length()` trả về số `char` (code unit), không phải số ký tự thực tế**
+- **Dùng `codePointCount()`, `codePoints()` cho xử lý Unicode chính xác**
+- **Luôn dùng `equals()` để so sánh nội dung String**
+- **Dùng `StringBuilder` cho việc nối chuỗi nhiều lần**
 
 ### 6. Lớp lồng nhau (Nested Class)
 
@@ -1226,7 +1517,7 @@ flowchart TB
 
 | Kiểu dữ liệu | Kích thước | Giá trị nhỏ nhất | Giá trị lớn nhất | Giá trị mặc định |
 | --- | --- | --- | --- | --- |
-| boolean | 1-bit | false | true | false |
+| boolean | Kích thước không xác định (JLS) | false | true | false |
 | byte | 8-bit | -128 | 127 | 0 |
 | short | 16-bit | -32,768 | 32,767 | 0 |
 | char | 16-bit | 0 | 65,535 (biểu diễn Unicode) | \u0000 |
@@ -1237,7 +1528,11 @@ flowchart TB
 
 ---
 
-> `char` mặc định là ký tự NUL `'\u0000'`, **không** phải `null`.
+> **Lưu ý quan trọng về `boolean`:**
+> - Kích thước của `boolean` **không được quy định trong JLS** (Java Language Specification)
+> - Triển khai thường dùng 1 byte trở lên, nhưng điều này không được đảm bảo theo tiêu chuẩn
+> - `char` mặc định là ký tự NUL `'\u0000'`, **không** phải `null`
+> - Giá trị mặc định `boolean` ở **trường** là `false`, nhưng **biến local** phải gán trước khi dùng
 
 ```java
 public class DefaultValueExample {
@@ -1878,10 +2173,7 @@ stateDiagram-v2
     RUNNABLE --> TIMED_WAITING : sleep(), wait(timeout), join(timeout)
     TIMED_WAITING --> RUNNABLE : Timeout or interrupt
     
-    RUNNABLE --> TERMINATED : run() completes
-    BLOCKED --> TERMINATED : Exception
-    WAITING --> TERMINATED : Exception
-    TIMED_WAITING --> TERMINATED : Exception
+    RUNNABLE --> TERMINATED : run() completes or exception
     
     TERMINATED --> [*]
     
@@ -2014,6 +2306,151 @@ public class ThreadStatesExample {
 - Trạng thái BLOCKED chỉ xảy ra khi chờ khóa monitor
 - Trạng thái WAITING và TIMED_WAITING xảy ra khi luồng đang chờ một sự kiện cụ thể
 - Không thể chuyển trực tiếp từ BLOCKED sang WAITING hoặc ngược lại
+- **Exception xảy ra trong `run()`** sẽ không tạo chuyển đổi trực tiếp từ các trạng thái khác sang TERMINATED - thread chỉ kết thúc từ RUNNABLE
+
+#### Happens-before và Java Memory Model (JMM)
+
+**Happens-before relationship** là nguyên tắc quan trọng trong JMM để đảm bảo tính hiển thị (visibility) và thứ tự (ordering) của các thao tác:
+
+```java
+// volatile đảm bảo happens-before
+class VolatileExample {
+    private volatile boolean flag = false;
+    private int data = 0;
+    
+    // Thread 1
+    public void writer() {
+        data = 42;        // (1) 
+        flag = true;      // (2) ghi vào volatile
+    }
+    
+    // Thread 2  
+    public void reader() {
+        if (flag) {       // (3) đọc từ volatile
+            System.out.println(data); // (4) sẽ thấy giá trị 42
+        }
+    }
+}
+// Happens-before: (1) -> (2) -> (3) -> (4)
+// Ghi vào volatile (2) happens-before mọi đọc volatile (3) sau đó
+```
+
+#### Bẫy thường gặp trong Đa luồng
+
+```java
+// Bẫy 1: Double-checked locking thiếu volatile
+class Singleton {
+    private static Singleton instance; // THIẾU volatile!
+    
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null) {
+                    instance = new Singleton(); // Có thể bị reordering!
+                }
+            }
+        }
+        return instance; // Có thể trả về đối tượng chưa khởi tạo hoàn chỉnh!
+    }
+}
+
+// ĐÚNG:
+class SafeSingleton {
+    private static volatile SafeSingleton instance;
+    
+    public static SafeSingleton getInstance() {
+        if (instance == null) {
+            synchronized (SafeSingleton.class) {
+                if (instance == null) {
+                    instance = new SafeSingleton();
+                }
+            }
+        }
+        return instance;
+    }
+}
+```
+
+```java
+// Bẫy 2: Nuốt InterruptedException
+class BadInterruptHandling {
+    public void run() {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            // SAI: Nuốt exception và không restore interrupt status
+            System.out.println("Interrupted");
+        }
+    }
+}
+
+// ĐÚNG:
+class GoodInterruptHandling {
+    public void run() {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupt status
+            System.out.println("Interrupted");
+            return; // Hoặc throw exception lên
+        }
+    }
+}
+```
+
+```java
+// Bẫy 3: long/double không volatile có thể không atomic
+class NonAtomicLongDouble {
+    private long value = 0L;    // Có thể bị "tearing" trong đa luồng
+    private double price = 0.0; // 64-bit, có thể đọc được giá trị lạ
+    
+    // Thread 1
+    public void updateValue() {
+        value = 0x1234567890ABCDEFL; // Có thể ghi từng nửa (32-bit)
+    }
+    
+    // Thread 2  
+    public long readValue() {
+        return value; // Có thể đọc được nửa cũ + nửa mới!
+    }
+}
+
+// ĐÚNG:
+class AtomicLongDouble {
+    private volatile long value = 0L;    // Đảm bảo atomic
+    private volatile double price = 0.0;
+    
+    // Hoặc dùng AtomicLong
+    private final AtomicLong atomicValue = new AtomicLong(0L);
+}
+```
+
+```java
+// Bẫy 4: Sử a đổi cấu trúc Collection trong khi duyệt
+List<String> list = new ArrayList<>(Arrays.asList("A", "B", "C"));
+
+// SAI: ConcurrentModificationException
+for (String item : list) {
+    if ("B".equals(item)) {
+        list.remove(item); // Lỗi!
+    }
+}
+
+// ĐÚNG: Dùng Iterator.remove()
+Iterator<String> iterator = list.iterator();
+while (iterator.hasNext()) {
+    String item = iterator.next();
+    if ("B".equals(item)) {
+        iterator.remove(); // An toàn
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **`volatile` đảm bảo happens-before** giữa ghi và đọc
+- **Luôn restore interrupt status** khi bắt `InterruptedException`
+- **`long/double` không volatile có thể không atomic** (JLS §17.7)
+- **Dùng Iterator.remove()** thay vì Collection.remove() khi duyệt
 
 #### 11.2. Phân biệt `Concurrency` và `Multithreading`
 
@@ -3019,6 +3456,53 @@ flowchart TD
 
 **3. Fetch và Cascade Types**
 
+**Mặc định FetchType (JPA)**:
+| Annotation | Default FetchType | Khuyến nghị |
+| --- | --- | --- |
+| `@OneToMany` | **LAZY** | Giữ LAZY, dùng join fetch khi cần |
+| `@ManyToMany` | **LAZY** | Giữ LAZY, dùng join fetch khi cần |
+| `@OneToOne` | **EAGER** | Nên đặt LAZY và điều chỉnh động |
+| `@ManyToOne` | **EAGER** | Có thể để EAGER hoặc đặt LAZY |
+
+**⚠️ Hibernate khuyến nghị đánh dấu LAZY và điều chỉnh eager "động" khi cần (join fetch).**
+
+**LazyInitializationException**:
+Xảy ra khi truy cập lazy-loaded property ngoài Hibernate session:
+
+```java
+@Entity
+public class User {
+    @OneToMany(fetch = FetchType.LAZY)
+    private List<Order> orders; // Lazy loading
+}
+
+// Service method
+public void problematicCode() {
+    User user = userRepository.findById(1L);
+    // Session đóng ở đây
+    
+    // ❌ LazyInitializationException!
+    System.out.println(user.getOrders().size()); 
+}
+
+// ✅ Giải pháp 1: Fetch trong session
+public void solution1() {
+    User user = userRepository.findById(1L);
+    user.getOrders().size(); // Force loading trong session
+}
+
+// ✅ Giải pháp 2: JOIN FETCH
+@Query("SELECT u FROM User u JOIN FETCH u.orders WHERE u.id = :id")
+User findByIdWithOrders(@Param("id") Long id);
+
+// ✅ Giải pháp 3: @Transactional
+@Transactional
+public void solution3() {
+    User user = userRepository.findById(1L);
+    user.getOrders().size(); // Session vẫn mở
+}
+```
+
 | Annotation | Mô tả | Ví dụ |
 | --- | --- | --- |
 | `FetchType.LAZY` | Tải dữ liệu khi cần thiết | `@OneToMany(fetch = FetchType.LAZY)` |
@@ -3114,6 +3598,144 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 }
 ```
 
+#### Bẫy thường gặp với JPA/Hibernate
+
+```java
+// Bẫy 1: N+1 Query Problem
+@Entity
+public class User {
+    @OneToMany(fetch = FetchType.LAZY)
+    private List<Order> orders;
+}
+
+// SAI: Gây N+1 queries
+List<User> users = userRepository.findAll(); // 1 query
+for (User user : users) {
+    System.out.println(user.getOrders().size()); // +N queries!
+}
+
+// ĐÚNG: Dùng JOIN FETCH
+@Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.orders")
+List<User> findAllWithOrders();
+
+// Hoặc batch fetch
+@BatchSize(size = 10)
+@OneToMany(fetch = FetchType.LAZY)
+private List<Order> orders;
+```
+
+```java
+// Bẫy 2: Lạm dụng cascade và orphanRemoval
+@Entity
+public class User {
+    // SAI: cascade = ALL có thể gây xóa không mong muốn
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Order> orders;
+}
+
+// Khi remove user, tất cả orders cũng bị xóa!
+user.getOrders().clear(); // Xóa tất cả orders!
+
+// ĐÚNG: Chỉ dùng cascade khi thực sự cần
+@OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+private List<Order> orders;
+```
+
+```java
+// Bẫy 3: equals/hashCode cho entity sai cách
+@Entity
+public class BadEntity {
+    @Id
+    @GeneratedValue
+    private Long id; // id được sinh sau khi persist!
+    
+    // SAI: Dựa trên id có thể null
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BadEntity)) return false;
+        return Objects.equals(id, ((BadEntity) o).id); // id có thể null!
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(id); // Thay đổi sau khi persist!
+    }
+}
+
+// ĐÚNG: Dùng business key
+@Entity
+public class GoodEntity {
+    @Id
+    @GeneratedValue
+    private Long id;
+    
+    @Column(unique = true)
+    private String code; // Business key
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GoodEntity)) return false;
+        return Objects.equals(code, ((GoodEntity) o).code);
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(code); // Không thay đổi
+    }
+}
+```
+
+```java
+// Bẫy 4: Truy cập lazy property ngoài session
+public class OrderService {
+    @Autowired
+    private OrderRepository orderRepository;
+    
+    public void processOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId);
+        // Session đóng ở đây
+        
+        // Lỗi như đã trình bày ở trên
+        sendEmailToUser(order.getUser().getEmail()); // LazyInitializationException!
+    }
+    
+    // ĐÚNG: Fetch trong session
+    @Transactional
+    public void processOrderCorrect(Long orderId) {
+        Order order = orderRepository.findById(orderId);
+        String email = order.getUser().getEmail(); // OK trong @Transactional
+        sendEmailToUser(email);
+    }
+}
+```
+
+```java
+// Bẫy 5: Không hiểu EntityManager lifecycle
+public class BadService {
+    @PersistenceContext
+    private EntityManager em;
+    
+    public void badMethod() {
+        User user = new User("john");
+        em.persist(user); // User trong persistence context
+        
+        user.setName("jane"); // Thay đổi được track
+        
+        // Không cần em.merge(user)! Hibernate tự động detect changes
+        em.merge(user); // Thừa! Dirty checking đã tự động làm
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **@OneToMany/@ManyToMany mặc định LAZY**; **@OneToOne/@ManyToOne mặc định EAGER**
+- **Nên đặt tất cả thành LAZY** và dùng JOIN FETCH khi cần
+- **Tránh CascadeType.ALL** trừ khi thực sự muốn cascade mọi thao tác
+- **Dùng business key cho equals/hashCode**, không dùng generated ID
+- **Luôn access lazy properties trong session** hoặc dùng @Transactional
+
 ### 15. Date and Time API
 
 ```mermaid
@@ -3167,9 +3789,9 @@ Java 8 giới thiệu API mới `java.time` để thay thế cho các lớp Date
 | --- | --- | --- |
 | `LocalDate` | Chỉ ngày (năm, tháng, ngày) | `LocalDate.now()` |
 | `LocalTime` | Chỉ thời gian (giờ, phút, giây) | `LocalTime.now()` |
-| `LocalDateTime` | Ngày và thời gian (không có timezone) | `LocalDateTime.now()` |
-| `ZonedDateTime` | Ngày và thời gian với timezone | `ZonedDateTime.now()` |
-| `Instant` | Thời điểm trên timeline (epoch-based) | `Instant.now()` |
+| `LocalDateTime` | Ngày và thời gian (**không có timezone** - mơ hồ khi DST) | `LocalDateTime.now()` |
+| `ZonedDateTime` | Ngày và thời gian với timezone (**khuyến nghị cho thời điểm tuyệt đối**) | `ZonedDateTime.now()` |
+| `Instant` | Thời điểm trên timeline (epoch-based, **tốt nhất cho timestamp**) | `Instant.now()` |
 | `Duration` | Khoảng thời gian tính bằng giây và nano giây | `Duration.between(start, end)` |
 | `Period` | Khoảng thời gian tính bằng năm, tháng, ngày | `Period.between(startDate, endDate)` |
 | `DateTimeFormatter` | Định dạng và parse ngày giờ | `DateTimeFormatter.ISO_LOCAL_DATE` |
@@ -3387,12 +4009,176 @@ public class BusinessDayCalculator {
         System.out.println("Next business day: " + nextBusinessDay(today));
         System.out.println("Previous business day: " + previousBusinessDay(today));
         
-        // Sử dụng TemporalAdjuster
+        // Sờ dụng TemporalAdjuster
         LocalDate nextBusiness = today.with(nextBusinessDayAdjuster());
         System.out.println("Next business day (using adjuster): " + nextBusiness);
     }
 }
 ```
+
+#### Bẫy thường gặp với Date & Time API
+
+```java
+// Bẫy 1: LocalDateTime không có timezone - mơ hồ khi DST
+class DateTimeTrap {
+    public void problematicMethod() {
+        // SAI: LocalDateTime không biết về timezone/DST!
+        LocalDateTime meeting = LocalDateTime.of(2023, 3, 26, 2, 30); // 2:30 AM
+        
+        // Vào ngày chuyển DST ở Eu châu, 2:30 AM có thể không tồn tại!
+        // LocalDateTime sẽ "giả vờ" rằng nó hợp lệ
+        
+        // Khi chuyển sang ZonedDateTime:
+        ZoneId paris = ZoneId.of("Europe/Paris");
+        try {
+            ZonedDateTime parisTime = meeting.atZone(paris);
+            // Exception hoặc thời gian không mong muốn!
+        } catch (DateTimeException e) {
+            System.out.println("Time does not exist due to DST!");
+        }
+    }
+    
+    // ĐÚNG: Dùng ZonedDateTime cho thời điểm tuyệt đối
+    public void correctMethod() {
+        ZoneId paris = ZoneId.of("Europe/Paris");
+        
+        // Tạo thời điểm an toàn
+        ZonedDateTime meeting = ZonedDateTime.of(
+            2023, 3, 26, 3, 30, 0, 0, paris
+        ); // 3:30 AM - sau khi DST
+        
+        // Hoặc dùng Instant cho timestamp
+        Instant timestamp = Instant.now();
+        ZonedDateTime parisTime = timestamp.atZone(paris);
+    }
+}
+```
+
+```java
+// Bẫy 2: Dùng ZoneId.systemDefault() rồi serialize sang máy khác
+class TimezoneTrap {
+    public void problematicSerialization() {
+        // SAI: Timezone phụ thuộc vào máy chủ
+        ZonedDateTime localTime = ZonedDateTime.now(ZoneId.systemDefault());
+        
+        // Khi serialize và gửi đến server khác timezone -> lỗi time!
+        String serialized = localTime.toString();
+        // Server khác deserialize với timezone khác -> sai thời gian!
+    }
+    
+    // ĐÚNG: Luôn dùng UTC cho storage/network
+    public void correctSerialization() {
+        Instant utcTime = Instant.now(); // UTC timestamp
+        
+        // Convert to local timezone khi hiển thị
+        ZoneId userZone = ZoneId.of("America/New_York");
+        ZonedDateTime localDisplay = utcTime.atZone(userZone);
+        
+        // Serialize Instant (UTC) - an toàn cho mọi máy
+        String serialized = utcTime.toString();
+    }
+}
+```
+
+```java
+// Bẫy 3: So sánh thời gian bằng millis khi không cùng offset
+class ComparisonTrap {
+    public void problematicComparison() {
+        ZonedDateTime ny = ZonedDateTime.of(
+            2023, 6, 15, 14, 0, 0, 0, 
+            ZoneId.of("America/New_York")
+        );
+        
+        ZonedDateTime london = ZonedDateTime.of(
+            2023, 6, 15, 19, 0, 0, 0, 
+            ZoneId.of("Europe/London")
+        );
+        
+        // SAI: So sánh trực tiếp có thể gây nhầm lẫn
+        if (ny.getHour() == london.getHour()) {
+            // Điều này sai! 14h NY != 19h London nhưng cùng thời điểm thực tế
+        }
+    }
+    
+    // ĐÚNG: Chuyển về cùng mốc thời gian để so sánh
+    public void correctComparison() {
+        ZonedDateTime ny = ZonedDateTime.of(
+            2023, 6, 15, 14, 0, 0, 0, 
+            ZoneId.of("America/New_York")
+        );
+        
+        ZonedDateTime london = ZonedDateTime.of(
+            2023, 6, 15, 19, 0, 0, 0, 
+            ZoneId.of("Europe/London")
+        );
+        
+        // So sánh Instant (UTC)
+        if (ny.toInstant().equals(london.toInstant())) {
+            System.out.println("Same moment in time!");
+        }
+        
+        // Hoặc so sánh với cùng timezone
+        ZonedDateTime londonInNY = london.withZoneSameInstant(ny.getZone());
+        if (ny.isEqual(londonInNY)) {
+            System.out.println("Same time!");
+        }
+    }
+}
+```
+
+```java
+// Bẫy 4: Xử lý Legacy Date API sai cách
+class LegacyDateTrap {
+    public void problematicLegacyHandling() {
+        // SAI: Date là mutable!
+        Date date = new Date();
+        modifyDate(date);
+        System.out.println(date); // Đã bị thay đổi!
+        
+        // SAI: SimpleDateFormat không thread-safe
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        // Dùng chung sdf trong nhiều thread -> race condition!
+    }
+    
+    private void modifyDate(Date date) {
+        date.setTime(System.currentTimeMillis() + 86400000); // +1 day
+    }
+    
+    // ĐÚNG: Chuyển sang java.time
+    public void correctModernHandling() {
+        LocalDate date = LocalDate.now();
+        LocalDate modifiedDate = modifyDateCorrect(date);
+        System.out.println("Original: " + date);
+        System.out.println("Modified: " + modifiedDate);
+        
+        // DateTimeFormatter là thread-safe
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String formatted = date.format(formatter);
+    }
+    
+    private LocalDate modifyDateCorrect(LocalDate date) {
+        return date.plusDays(1); // Immutable - trả về instance mới
+    }
+    
+    // Conversion giữa old và new API
+    public void conversionExamples() {
+        // Date -> Instant -> ZonedDateTime
+        Date legacyDate = new Date();
+        Instant instant = legacyDate.toInstant();
+        ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());
+        
+        // ZonedDateTime -> Date
+        Date backToLegacy = Date.from(zdt.toInstant());
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **`LocalDateTime` không có múi giờ** - mơ hồ khi DST, dùng `ZonedDateTime` cho thời điểm tuyệt đối
+- **Dùng `Instant` cho timestamp** và storage - luôn UTC
+- **Tránh `ZoneId.systemDefault()`** khi serialize/network - dùng timezone rõ ràng
+- **So sánh thời gian qua `Instant`** hoặc cùng timezone
+- **`java.time` là immutable và thread-safe**, `java.util.Date` thì không
 
 ### 16. Stream API và Java Reflection
 
@@ -3644,6 +4430,206 @@ public class ParallelStreamExample {
 - **Tránh lạm dụng chaining quá nhiều operations**
 - **Sử dụng Optional cẩn thận với findFirst/findAny**
 - **Không sử dụng stream để thay thế vòng lặp đơn giản**
+
+#### Bẫy thường gặp với Stream API
+
+```java
+// Bẫy 1: Stream dùng một lần - đã vận hành hoặc đóng
+class StreamReuseTrap {
+    public void problematicReuse() {
+        Stream<String> stream = Stream.of("a", "b", "c");
+        
+        long count1 = stream.count(); // OK - terminal operation
+        
+        try {
+            long count2 = stream.count(); // IllegalStateException!
+        } catch (IllegalStateException e) {
+            System.out.println("Stream already operated upon or closed!");
+        }
+    }
+    
+    // ĐÚNG: Tạo stream mới hoặc dùng Supplier
+    public void correctApproach() {
+        Supplier<Stream<String>> streamSupplier = () -> Stream.of("a", "b", "c");
+        
+        long count1 = streamSupplier.get().count();
+        long count2 = streamSupplier.get().count(); // OK
+    }
+}
+```
+
+```java
+// Bẫy 2: Side-effect trong map/filter - hành vi khó lường
+class SideEffectTrap {
+    private List<String> sideEffectList = new ArrayList<>();
+    
+    public void problematicSideEffect() {
+        List<String> items = Arrays.asList("a", "b", "c", "d");
+        
+        // SAI: Side-effect trong map
+        List<String> result = items.stream()
+            .map(item -> {
+                sideEffectList.add(item); // Side-effect!
+                return item.toUpperCase();
+            })
+            .filter(item -> item.length() > 0)
+            .collect(Collectors.toList());
+        
+        // Với parallel stream, thứ tự và thread safety không đảm bảo!
+    }
+    
+    // ĐÚNG: Dùng collect hoặc forEach cho side-effects
+    public void correctApproach() {
+        List<String> items = Arrays.asList("a", "b", "c", "d");
+        
+        // Chứa các phần tử gốc
+        List<String> collected = items.stream()
+            .collect(Collectors.toList());
+        
+        // Transform riêng
+        List<String> transformed = items.stream()
+            .map(String::toUpperCase)
+            .collect(Collectors.toList());
+        
+        // Side-effect an toàn
+        items.stream()
+            .forEach(sideEffectList::add);
+    }
+}
+```
+
+```java
+// Bẫy 3: Parallel stream với nguồn không phù hợp
+class ParallelStreamTrap {
+    public void problematicParallel() {
+        // SAI: Parallel stream với LinkedList (không splittable tốt)
+        LinkedList<Integer> linkedList = new LinkedList<>();
+        for (int i = 0; i < 1000000; i++) {
+            linkedList.add(i);
+        }
+        
+        // Chậm hơn sequential!
+        long parallelSum = linkedList.parallelStream()
+            .mapToLong(Integer::longValue)
+            .sum();
+        
+        // SAI: Parallel với I/O operations
+        List<String> urls = Arrays.asList("url1", "url2", "url3");
+        urls.parallelStream()
+            .map(this::fetchDataFromUrl) // I/O blocking -> không hiệu quả
+            .collect(Collectors.toList());
+    }
+    
+    // ĐÚNG: Dùng parallel cho các tác vụ CPU-intensive
+    public void correctParallelUsage() {
+        // Tốt cho ArrayList và các thao tác CPU-intensive
+        List<Integer> arrayList = new ArrayList<>();
+        for (int i = 0; i < 1000000; i++) {
+            arrayList.add(i);
+        }
+        
+        long parallelSum = arrayList.parallelStream()
+            .filter(n -> n % 2 == 0)
+            .mapToLong(Integer::longValue)
+            .sum();
+        
+        // Cho I/O: dùng CompletableFuture hoặc Reactive Streams
+        List<CompletableFuture<String>> futures = 
+            Arrays.asList("url1", "url2", "url3")
+                .stream()
+                .map(url -> CompletableFuture.supplyAsync(() -> fetchDataFromUrl(url)))
+                .collect(Collectors.toList());
+    }
+    
+    private String fetchDataFromUrl(String url) {
+        // Simulate I/O
+        try { Thread.sleep(100); } catch (InterruptedException e) {}
+        return "data from " + url;
+    }
+}
+```
+
+```java
+// Bẫy 4: Autoboxing trong stream gây chi phí ẩn
+class AutoboxingTrap {
+    public void problematicAutoboxing() {
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+        
+        // SAI: Nhiều autoboxing/unboxing
+        int sum = numbers.stream()
+            .filter(n -> n > 2)    // unboxing
+            .map(n -> n * 2)       // unboxing -> boxing
+            .reduce(0, Integer::sum); // unboxing
+    }
+    
+    // ĐÚNG: Dùng specialized streams
+    public void correctApproach() {
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+        
+        // Hiệu quả hơn: dùng IntStream
+        int sum = numbers.stream()
+            .mapToInt(Integer::intValue) // Chuyển về IntStream
+            .filter(n -> n > 2)
+            .map(n -> n * 2)
+            .sum();
+        
+        // Hoặc bắt đầu với primitive stream
+        int sum2 = IntStream.rangeClosed(1, 5)
+            .filter(n -> n > 2)
+            .map(n -> n * 2)
+            .sum();
+    }
+}
+```
+
+```java
+// Bẫy 5: Sử dụng state mutable trong reduce/collect song song
+class MutableStateTrap {
+    public void problematicMutableState() {
+        List<String> items = Arrays.asList("a", "b", "c", "d");
+        
+        // SAI: Mutable state trong parallel stream
+        StringBuilder sb = new StringBuilder();
+        items.parallelStream()
+            .forEach(item -> sb.append(item)); // Race condition!
+        
+        // SAI: Reduce với mutable accumulator
+        StringBuilder result = items.parallelStream()
+            .reduce(new StringBuilder(),
+                    (acc, item) -> acc.append(item), // Không thread-safe!
+                    (acc1, acc2) -> acc1.append(acc2));
+    }
+    
+    // ĐÚNG: Dùng immutable operations
+    public void correctApproach() {
+        List<String> items = Arrays.asList("a", "b", "c", "d");
+        
+        // Dùng joining collector
+        String result1 = items.parallelStream()
+            .collect(Collectors.joining());
+        
+        // Hoặc reduce với String (immutable)
+        String result2 = items.parallelStream()
+            .reduce("", String::concat);
+        
+        // Dùng collect với thread-safe collector
+        String result3 = items.parallelStream()
+            .collect(Collector.of(
+                StringBuilder::new,
+                StringBuilder::append,
+                StringBuilder::append,
+                StringBuilder::toString
+            ));
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **Stream dùng một lần** - đã vận hành hoặc đóng không dùng lại được
+- **Tránh side-effects trong map/filter** - dùng forEach cho side-effects
+- **Parallel stream chỉ tốt cho CPU-intensive tasks** và data structures splittable
+- **Dùng specialized streams** (IntStream, LongStream) để tránh autoboxing
+- **Không dùng mutable state trong parallel streams** - dùng thread-safe collectors
 
 #### 16.2. Java Reflection
 
@@ -4258,6 +5244,559 @@ boolean isValid = matcher.matches();
 boolean isValid = email.matches(EMAIL_REGEX);
 ```
 
+### **Bẫy thường gặp (Common Pitfalls) với Regular Expressions**
+
+#### **Bẫy 1: Catastrophic Backtracking**
+
+**Vấn đề:** Các pattern có nested quantifiers có thể gây ra exponential time complexity.
+
+```java
+public class CatastrophicBacktrackingExample {
+    public static void main(String[] args) {
+        // ❌ NGUY HIỂM: Pattern này có thể gây catastrophic backtracking
+        String dangerousPattern = "(a+)+b";
+        String input = "aaaaaaaaaaaaaaaaaaaaaaaaaaac"; // Không có 'b' ở cuối
+        
+        long startTime = System.currentTimeMillis();
+        boolean result = input.matches(dangerousPattern);
+        long endTime = System.currentTimeMillis();
+        
+        System.out.println("Result: " + result);
+        System.out.println("Time taken: " + (endTime - startTime) + "ms");
+        // Có thể mất hàng giây hoặc hàng phút!
+        
+        // ❌ Các pattern nguy hiểm khác:
+        // "(a|a)*b"     - ambiguous alternatives
+        // "(a*)*b"      - nested quantifiers
+        // "(a+a+)+b"    - overlapping quantifiers
+        // "(.*a){x}.*b" - exponential combinations
+        
+        // ✅ GIẢI PHÁP 1: Sử dụng possessive quantifiers
+        String safePattern1 = "a++b"; // possessive quantifier
+        System.out.println("Safe pattern 1: " + input.matches(safePattern1));
+        
+        // ✅ GIẢI PHÁP 2: Sử dụng atomic groups
+        String safePattern2 = "(?>a+)b"; // atomic group
+        System.out.println("Safe pattern 2: " + input.matches(safePattern2));
+        
+        // ✅ GIẢI PHÁP 3: Viết lại pattern đơn giản hơn
+        String safePattern3 = "a+b";
+        System.out.println("Safe pattern 3: " + input.matches(safePattern3));
+    }
+}
+```
+
+#### **Bẫy 2: Possessive Quantifiers và Atomic Groups**
+
+**Vấn đề:** Không hiểu sự khác biệt giữa greedy, reluctant, và possessive quantifiers.
+
+```java
+public class QuantifierTypesExample {
+    public static void main(String[] args) {
+        String text = "aaab";
+        
+        System.out.println("Text: " + text);
+        
+        // Greedy quantifier (mặc định)
+        Pattern greedyPattern = Pattern.compile("a+b");
+        Matcher greedyMatcher = greedyPattern.matcher(text);
+        if (greedyMatcher.find()) {
+            System.out.println("Greedy a+b: " + greedyMatcher.group()); // "aaab"
+        }
+        
+        // Reluctant quantifier (lazy)
+        Pattern reluctantPattern = Pattern.compile("a+?b");
+        Matcher reluctantMatcher = reluctantPattern.matcher(text);
+        if (reluctantMatcher.find()) {
+            System.out.println("Reluctant a+?b: " + reluctantMatcher.group()); // "aaab"
+        }
+        
+        // ✅ Possessive quantifier (không backtrack)
+        Pattern possessivePattern = Pattern.compile("a++b");
+        Matcher possessiveMatcher = possessivePattern.matcher(text);
+        if (possessiveMatcher.find()) {
+            System.out.println("Possessive a++b: " + possessiveMatcher.group()); // "aaab"
+        }
+        
+        // ❌ Ví dụ possessive quantifier THẤT BẠI
+        String failText = "aaab";
+        Pattern failPattern = Pattern.compile("a++ab"); // a++ sẽ lấy tất cả 'a', không còn cho 'a' cuối
+        Matcher failMatcher = failPattern.matcher(failText);
+        System.out.println("Possessive a++ab matches: " + failMatcher.find()); // false
+        
+        // ✅ So sánh với greedy
+        Pattern greedyPattern2 = Pattern.compile("a+ab");
+        Matcher greedyMatcher2 = greedyPattern2.matcher(failText);
+        System.out.println("Greedy a+ab matches: " + greedyMatcher2.find()); // true
+        
+        demonstrateAtomicGroups();
+    }
+    
+    private static void demonstrateAtomicGroups() {
+        System.out.println("\n=== ATOMIC GROUPS ===");
+        String text = "abcc";
+        
+        // ❌ Thông thường: có backtracking
+        Pattern normalPattern = Pattern.compile("(ab|abc)c");
+        Matcher normalMatcher = normalPattern.matcher(text);
+        System.out.println("Normal (ab|abc)c: " + normalMatcher.find()); // true
+        
+        // ✅ Atomic group: KHÔNG backtracking
+        Pattern atomicPattern = Pattern.compile("(?>ab|abc)c");
+        Matcher atomicMatcher = atomicPattern.matcher(text);
+        System.out.println("Atomic (?>ab|abc)c: " + atomicMatcher.find()); // false
+        // Giải thích: "abc" được chọn trước, nhưng không còn 'c' để match
+        
+        // ✅ Thứ tự quan trọng trong atomic groups
+        Pattern atomicPattern2 = Pattern.compile("(?>abc|ab)c");
+        Matcher atomicMatcher2 = atomicPattern2.matcher(text);
+        System.out.println("Atomic (?>abc|ab)c: " + atomicMatcher2.find()); // true
+    }
+}
+```
+
+#### **Bẫy 3: Lookahead và Lookbehind Assertions**
+
+```java
+public class LookaroundExample {
+    public static void main(String[] args) {
+        String text = "password123";
+        
+        // ✅ Positive lookahead: (?=...)
+        // Kiểm tra password có ít nhất 1 số
+        Pattern hasDigit = Pattern.compile("(?=.*\\d).+");
+        System.out.println("Has digit: " + hasDigit.matcher(text).matches()); // true
+        
+        // ✅ Negative lookahead: (?!...)
+        // Kiểm tra không bắt đầu bằng số
+        Pattern notStartWithDigit = Pattern.compile("(?!\\d).+");
+        System.out.println("Not start with digit: " + notStartWithDigit.matcher(text).matches()); // true
+        
+        // ✅ Positive lookbehind: (?<=...)
+        String text2 = "The price is $100";
+        Pattern afterDollar = Pattern.compile("(?<=\\$)\\d+");
+        Matcher matcher = afterDollar.matcher(text2);
+        if (matcher.find()) {
+            System.out.println("Price: " + matcher.group()); // "100"
+        }
+        
+        // ✅ Negative lookbehind: (?<!...)
+        String text3 = "file.txt and note.txt but not .hidden";
+        Pattern notAfterDot = Pattern.compile("(?<!\\.)[a-z]+");
+        Matcher matcher2 = notAfterDot.matcher(text3);
+        while (matcher2.find()) {
+            System.out.println("Word not after dot: " + matcher2.group());
+        }
+        
+        // ❌ BẪY: Lookbehind phải có độ dài cố định
+        // Pattern invalidLookbehind = Pattern.compile("(?<=a+)b"); // COMPILE ERROR
+        
+        // ✅ Workaround cho variable-length lookbehind
+        demonstrateComplexPassword();
+    }
+    
+    private static void demonstrateComplexPassword() {
+        System.out.println("\n=== COMPLEX PASSWORD VALIDATION ===");
+        
+        // ✅ Password phải có: 8+ ký tự, 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt
+        String passwordPattern = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
+        Pattern pattern = Pattern.compile(passwordPattern);
+        
+        String[] passwords = {
+            "Password123!",  // ✅ valid
+            "password123!", // ❌ không có chữ hoa
+            "PASSWORD123!", // ❌ không có chữ thường
+            "Password!",    // ❌ không có số
+            "Password123",  // ❌ không có ký tự đặc biệt
+            "Pass123!",     // ❌ quá ngắn
+        };
+        
+        for (String pwd : passwords) {
+            boolean isValid = pattern.matcher(pwd).matches();
+            System.out.println(pwd + " -> " + (isValid ? "✅ Valid" : "❌ Invalid"));
+        }
+    }
+}
+```
+
+#### **Bẫy 4: Unicode và Character Classes**
+
+```java
+public class UnicodeRegexExample {
+    public static void main(String[] args) {
+        // ❌ BẪY: \w chỉ match ASCII word characters
+        String text = "café";
+        Pattern asciiWord = Pattern.compile("\\w+");
+        Matcher matcher1 = asciiWord.matcher(text);
+        if (matcher1.find()) {
+            System.out.println("ASCII \\w+: " + matcher1.group()); // "caf" (thiếu é)
+        }
+        
+        // ✅ GIẢI PHÁP: Sử dụng Unicode property
+        Pattern unicodeWord = Pattern.compile("\\p{L}+"); // \p{L} = Unicode letters
+        Matcher matcher2 = unicodeWord.matcher(text);
+        if (matcher2.find()) {
+            System.out.println("Unicode \\p{L}+: " + matcher2.group()); // "café"
+        }
+        
+        // ✅ Các Unicode properties hữu ích
+        demonstrateUnicodeProperties();
+    }
+    
+    private static void demonstrateUnicodeProperties() {
+        System.out.println("\n=== UNICODE PROPERTIES ===");
+        
+        String[] texts = {"ABC", "abc", "123", "café", "中文", "🚀", "   "};
+        
+        Pattern[] patterns = {
+            Pattern.compile("\\p{Lu}"),    // Uppercase letters
+            Pattern.compile("\\p{Ll}"),    // Lowercase letters  
+            Pattern.compile("\\p{L}"),     // All letters
+            Pattern.compile("\\p{Nd}"),    // Decimal digits
+            Pattern.compile("\\p{P}"),     // Punctuation
+            Pattern.compile("\\p{S}"),     // Symbols
+            Pattern.compile("\\p{Z}"),     // Separators (spaces)
+        };
+        
+        String[] descriptions = {
+            "Uppercase", "Lowercase", "Letters", "Digits", 
+            "Punctuation", "Symbols", "Spaces"
+        };
+        
+        for (String text : texts) {
+            System.out.print("\"" + text + "\": ");
+            for (int i = 0; i < patterns.length; i++) {
+                if (patterns[i].matcher(text).find()) {
+                    System.out.print(descriptions[i] + " ");
+                }
+            }
+            System.out.println();
+        }
+    }
+}
+```
+
+#### **Bẫy 5: Flags và Mode Modifiers**
+
+```java
+public class RegexFlagsExample {
+    public static void main(String[] args) {
+        String text = "Hello\nWorld\nJava";
+        
+        // ❌ BẪY: . không match newline mặc định
+        Pattern defaultPattern = Pattern.compile("Hello.*Java");
+        System.out.println("Default .: " + defaultPattern.matcher(text).find()); // false
+        
+        // ✅ GIẢI PHÁP: Sử dụng DOTALL flag
+        Pattern dotallPattern = Pattern.compile("Hello.*Java", Pattern.DOTALL);
+        System.out.println("DOTALL .: " + dotallPattern.matcher(text).find()); // true
+        
+        // ✅ Inline modifier
+        Pattern inlinePattern = Pattern.compile("(?s)Hello.*Java");
+        System.out.println("Inline (?s): " + inlinePattern.matcher(text).find()); // true
+        
+        // ❌ BẪY: ^ và $ với multiline
+        String multilineText = "start\nmiddle\nend";
+        Pattern singleLinePattern = Pattern.compile("^middle$");
+        System.out.println("Single line ^middle$: " + singleLinePattern.matcher(multilineText).find()); // false
+        
+        // ✅ GIẢI PHÁP: MULTILINE flag
+        Pattern multilinePattern = Pattern.compile("^middle$", Pattern.MULTILINE);
+        System.out.println("Multiline ^middle$: " + multilinePattern.matcher(multilineText).find()); // true
+        
+        demonstrateAllFlags();
+    }
+    
+    private static void demonstrateAllFlags() {
+        System.out.println("\n=== ALL REGEX FLAGS ===");
+        
+        // Pattern.CASE_INSENSITIVE hoặc (?i)
+        Pattern caseInsensitive = Pattern.compile("(?i)hello");
+        System.out.println("Case insensitive: " + caseInsensitive.matcher("HELLO").matches()); // true
+        
+        // Pattern.MULTILINE hoặc (?m)
+        String text = "line1\nline2";
+        Pattern multiline = Pattern.compile("(?m)^line2$");
+        System.out.println("Multiline: " + multiline.matcher(text).find()); // true
+        
+        // Pattern.DOTALL hoặc (?s)
+        Pattern dotall = Pattern.compile("(?s)line1.*line2");
+        System.out.println("Dotall: " + dotall.matcher(text).matches()); // true
+        
+        // Pattern.COMMENTS hoặc (?x) - cho phép comment và whitespace
+        Pattern commented = Pattern.compile("(?x)" +
+            "\\d{3}    # 3 digits for area code\n" +
+            "-        # dash\n" +
+            "\\d{4}    # 4 digits for number");
+        System.out.println("Commented: " + commented.matcher("123-4567").matches()); // true
+        
+        // Pattern.UNICODE_CASE hoặc (?u)
+        Pattern unicodeCase = Pattern.compile("(?iu)café");
+        System.out.println("Unicode case: " + unicodeCase.matcher("CAFÉ").matches()); // true
+    }
+}
+```
+
+#### **Bẫy 6: Performance và Memory Issues**
+
+```java
+import java.util.regex.*;
+import java.util.concurrent.TimeUnit;
+
+public class RegexPerformanceExample {
+    private static final String EMAIL_REGEX = "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}";
+    
+    public static void main(String[] args) {
+        demonstratePatternCaching();
+        demonstrateTimeoutProtection();
+        demonstrateMemoryUsage();
+    }
+    
+    private static void demonstratePatternCaching() {
+        System.out.println("=== PATTERN CACHING ===");
+        
+        String[] emails = {
+            "user1@example.com", "user2@test.org", "user3@domain.net"
+        };
+        
+        // ❌ XẤU: Compile pattern mỗi lần
+        long startTime = System.nanoTime();
+        for (String email : emails) {
+            for (int i = 0; i < 1000; i++) {
+                email.matches(EMAIL_REGEX); // Compile pattern mỗi lần!
+            }
+        }
+        long badTime = System.nanoTime() - startTime;
+        
+        // ✅ TỐT: Cache compiled pattern
+        Pattern cachedPattern = Pattern.compile(EMAIL_REGEX);
+        startTime = System.nanoTime();
+        for (String email : emails) {
+            for (int i = 0; i < 1000; i++) {
+                cachedPattern.matcher(email).matches();
+            }
+        }
+        long goodTime = System.nanoTime() - startTime;
+        
+        System.out.println("Without caching: " + TimeUnit.NANOSECONDS.toMillis(badTime) + "ms");
+        System.out.println("With caching: " + TimeUnit.NANOSECONDS.toMillis(goodTime) + "ms");
+        System.out.println("Improvement: " + (badTime / goodTime) + "x faster");
+    }
+    
+    private static void demonstrateTimeoutProtection() {
+        System.out.println("\n=== TIMEOUT PROTECTION ===");
+        
+        // ❌ Pattern nguy hiểm có thể gây hang
+        String dangerousPattern = "(a+)+b";
+        String input = "aaaaaaaaaaaaaaaaaaaac"; // Không có 'b'
+        
+        // ✅ Implement timeout protection
+        class RegexTask implements Runnable {
+            private volatile boolean completed = false;
+            private volatile boolean result = false;
+            
+            @Override
+            public void run() {
+                try {
+                    result = input.matches(dangerousPattern);
+                    completed = true;
+                } catch (Exception e) {
+                    completed = true;
+                }
+            }
+            
+            public boolean isCompleted() { return completed; }
+            public boolean getResult() { return result; }
+        }
+        
+        RegexTask task = new RegexTask();
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        
+        long startTime = System.currentTimeMillis();
+        thread.start();
+        
+        // Chờ tối đa 1 giây
+        try {
+            thread.join(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        if (task.isCompleted()) {
+            System.out.println("Regex completed: " + task.getResult());
+        } else {
+            System.out.println("Regex timed out after 1 second - prevented hang!");
+            thread.interrupt();
+        }
+    }
+    
+    private static void demonstrateMemoryUsage() {
+        System.out.println("\n=== MEMORY USAGE ===");
+        
+        // ❌ Tạo quá nhiều Pattern objects
+        Runtime runtime = Runtime.getRuntime();
+        long beforeMemory = runtime.totalMemory() - runtime.freeMemory();
+        
+        // Tạo 10000 patterns (không nên làm thế này!)
+        Pattern[] patterns = new Pattern[10000];
+        for (int i = 0; i < patterns.length; i++) {
+            patterns[i] = Pattern.compile("pattern" + i);
+        }
+        
+        long afterMemory = runtime.totalMemory() - runtime.freeMemory();
+        System.out.println("Memory used for 10000 patterns: " + 
+            (afterMemory - beforeMemory) / 1024 + " KB");
+        
+        // ✅ Sử dụng pattern cache hoặc giới hạn số lượng
+        System.out.println("Recommendation: Use PatternCache or limit pattern creation");
+    }
+}
+```
+
+#### **Bẫy 7: Thread Safety**
+
+```java
+import java.util.regex.*;
+import java.util.concurrent.*;
+
+public class RegexThreadSafetyExample {
+    private static final Pattern SHARED_PATTERN = Pattern.compile("\\d+");
+    
+    public static void main(String[] args) throws InterruptedException {
+        demonstratePatternThreadSafety();
+        demonstrateMatcherThreadUnsafety();
+    }
+    
+    private static void demonstratePatternThreadSafety() {
+        System.out.println("=== PATTERN THREAD SAFETY ===");
+        
+        // ✅ Pattern objects là thread-safe
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        CountDownLatch latch = new CountDownLatch(10);
+        
+        for (int i = 0; i < 10; i++) {
+            final int threadId = i;
+            executor.submit(() -> {
+                try {
+                    // An toàn khi chia sẻ Pattern giữa các threads
+                    String input = "Thread " + threadId + " has 123 numbers";
+                    Matcher matcher = SHARED_PATTERN.matcher(input);
+                    if (matcher.find()) {
+                        System.out.println("Thread " + threadId + " found: " + matcher.group());
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        executor.shutdown();
+    }
+    
+    private static void demonstrateMatcherThreadUnsafety() {
+        System.out.println("\n=== MATCHER THREAD UNSAFETY ===");
+        
+        // ❌ NGUY HIỂM: Chia sẻ Matcher giữa các threads
+        Matcher sharedMatcher = SHARED_PATTERN.matcher("");
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        CountDownLatch latch = new CountDownLatch(5);
+        
+        for (int i = 0; i < 5; i++) {
+            final int threadId = i;
+            executor.submit(() -> {
+                try {
+                    // ❌ Race condition: multiple threads modify cùng Matcher
+                    String input = "Data" + threadId + "123";
+                    sharedMatcher.reset(input); // NOT THREAD SAFE!
+                    
+                    if (sharedMatcher.find()) {
+                        // Kết quả có thể bị lẫn lộn giữa các threads
+                        System.out.println("Unsafe - Thread " + threadId + 
+                            " found: " + sharedMatcher.group());
+                    }
+                } catch (Exception e) {
+                    System.out.println("Thread " + threadId + " error: " + e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        executor.shutdown();
+        
+        System.out.println("\n✅ GIẢI PHÁP: Mỗi thread tạo Matcher riêng");
+        demonstrateSafeMatcherUsage();
+    }
+    
+    private static void demonstrateSafeMatcherUsage() {
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        CountDownLatch latch = new CountDownLatch(5);
+        
+        for (int i = 0; i < 5; i++) {
+            final int threadId = i;
+            executor.submit(() -> {
+                try {
+                    // ✅ AN TOÀN: Mỗi thread có Matcher riêng
+                    String input = "Data" + threadId + "456";
+                    Matcher matcher = SHARED_PATTERN.matcher(input); // Thread-local
+                    
+                    if (matcher.find()) {
+                        System.out.println("Safe - Thread " + threadId + 
+                            " found: " + matcher.group());
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        executor.shutdown();
+    }
+}
+```
+
+#### **Tóm tắt Best Practices cho Regular Expressions**
+
+1. **Hiệu suất:**
+   - Cache compiled Pattern objects
+   - Tránh nested quantifiers gây catastrophic backtracking
+   - Sử dụng possessive quantifiers và atomic groups khi cần
+   - Implement timeout cho regex phức tạp
+
+2. **Thread Safety:**
+   - Pattern objects là thread-safe, có thể chia sẻ
+   - Matcher objects KHÔNG thread-safe, mỗi thread cần instance riêng
+   - Sử dụng ThreadLocal cho Matcher nếu cần tối ưu performance
+
+3. **Unicode Support:**
+   - Sử dụng Unicode properties (\p{L}, \p{N}) thay vì ASCII classes
+   - Cẩn thận với case-insensitive matching cho Unicode
+
+4. **Debugging và Testing:**
+   - Test regex với nhiều edge cases
+   - Sử dụng regex debugger tools
+   - Document regex phức tạp với comments
+   - Validate performance với large inputs
+
 ---
 
 ## VII. Các khái niệm bổ sung quan trọng
@@ -4373,6 +5912,203 @@ public class GenericUtils {
         list.add(3);
     }
 }
+```
+
+#### Bẫy thường gặp với Generics
+
+```java
+// Bẫy 1: Type erasure - không tạo được new T[] hoặc instanceof với type parameter
+class TypeErasureTrap<T> {
+    public void problematicMethods() {
+        // SAI: Không thể tạo mảng generic
+        // T[] array = new T[10]; // Compile error!
+        
+        // SAI: Không thể dùng instanceof với type parameter
+        // if (obj instanceof T) { } // Compile error!
+        
+        // SAI: Không thể tạo instance của T
+        // T instance = new T(); // Compile error!
+    }
+    
+    // ĐÚNG: Giải pháp cho type erasure
+    private final Class<T> clazz;
+    
+    public TypeErasureTrap(Class<T> clazz) {
+        this.clazz = clazz;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public T[] createArray(int size) {
+        return (T[]) Array.newInstance(clazz, size);
+    }
+    
+    public boolean isInstance(Object obj) {
+        return clazz.isInstance(obj);
+    }
+    
+    public T createInstance() throws Exception {
+        return clazz.newInstance();
+    }
+}
+```
+
+```java
+// Bẫy 2: PECS (Producer Extends, Consumer Super) bị dùng ngược
+class PECSTrap {
+    public void problematicPECS() {
+        List<Integer> integers = Arrays.asList(1, 2, 3);
+        List<Number> numbers = new ArrayList<>();
+        
+        // SAI: Dùng ngược PECS
+        // copyWrong(integers, numbers); // Compile error!
+    }
+    
+    // SAI: Tham số ngược
+    public static void copyWrong(List<? super Integer> source, 
+                                List<? extends Number> dest) {
+        // Không thể read từ ? super và write vào ? extends!
+    }
+    
+    // ĐÚNG: PECS - Producer Extends, Consumer Super
+    public static void copyCorrect(List<? extends Number> source,  // Producer: đọc data
+                                  List<? super Number> dest) {     // Consumer: ghi data
+        for (Number number : source) {
+            dest.add(number);
+        }
+    }
+    
+    // Ví dụ PECS principle
+    public void correctPECSUsage() {
+        List<Integer> integers = Arrays.asList(1, 2, 3);
+        List<Number> numbers = new ArrayList<>();
+        
+        copyCorrect(integers, numbers); // OK!
+        
+        // Producer extends: có thể đọc nhưng không ghi
+        List<? extends Number> producer = integers;
+        Number num = producer.get(0); // OK - đọc
+        // producer.add(4); // Compile error - không ghi được!
+        
+        // Consumer super: có thể ghi nhưng không đọc (chỉ Object)
+        List<? super Integer> consumer = numbers;
+        consumer.add(5); // OK - ghi
+        // Integer value = consumer.get(0); // Compile error - chỉ trả về Object!
+        Object value = consumer.get(0); // OK nhưng chỉ là Object
+    }
+}
+```
+
+```java
+// Bẫy 3: Autoboxing trong generics gây chi phí ẩn
+class AutoboxingTrap {
+    public void problematicAutoboxing() {
+        List<Integer> list = new ArrayList<>();
+        
+        // Mỗi lần add -> autoboxing
+        for (int i = 0; i < 1000; i++) {
+            list.add(i); // int -> Integer autoboxing
+        }
+        
+        // Mỗi lần truy cập -> unboxing
+        int sum = 0;
+        for (Integer num : list) {
+            sum += num; // Integer -> int unboxing
+        }
+    }
+    
+    // ĐÚNG: Dùng primitive collections (third-party) hoặc specialized APIs
+    public void correctApproach() {
+        // Option 1: Eclipse Collections (third-party)
+        // MutableIntList list = new IntArrayList();
+        
+        // Option 2: Dùng arrays cho hiệu suất cao
+        int[] array = new int[1000];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = i;
+        }
+        
+        int sum = Arrays.stream(array).sum(); // IntStream - không boxing
+        
+        // Option 3: Dùng primitive streams
+        int sum2 = IntStream.range(0, 1000)
+            .sum(); // Không autoboxing/unboxing
+    }
+}
+```
+
+```java
+// Bẫy 4: Raw types và heap pollution
+class RawTypesTrap {
+    @SuppressWarnings("rawtypes")
+    public void problematicRawTypes() {
+        // SAI: Raw types - mất type safety
+        List rawList = new ArrayList();
+        rawList.add("String");
+        rawList.add(123);
+        
+        // Runtime ClassCastException!
+        List<String> stringList = rawList;
+        for (String s : stringList) {
+            System.out.println(s.toUpperCase()); // Boom! 123 không phải String
+        }
+    }
+    
+    // SAI: Heap pollution với varargs
+    @SafeVarargs // Cần annotation này để suppress warning
+    public static <T> void problematicVarargs(List<T>... lists) {
+        Object[] array = lists; // Heap pollution
+        List<String> stringList = Arrays.asList("danger");
+        array[0] = stringList; // Runtime type pollution!
+    }
+    
+    // ĐÚNG: Tránh raw types
+    public void correctApproach() {
+        List<String> stringList = new ArrayList<>();
+        stringList.add("Safe");
+        
+        // Type-safe processing
+        for (String s : stringList) {
+            System.out.println(s.toUpperCase());
+        }
+    }
+}
+```
+
+```java
+// Bẫy 5: Generic method overload resolution mơ hồ
+class OverloadTrap {
+    // Ambiguous overloading với generics
+    public void process(List<String> list) {
+        System.out.println("String list");
+    }
+    
+    // SAI: Type erasure không phân biệt được
+    // public void process(List<Integer> list) { // Compile error!
+    //     System.out.println("Integer list");
+    // }
+    
+    // ĐÚNG: Dùng bounded wildcards hoặc tên method khác
+    public void processStrings(List<String> list) {
+        System.out.println("String list");
+    }
+    
+    public void processIntegers(List<Integer> list) {
+        System.out.println("Integer list");
+    }
+    
+    // Hoặc dùng generic method
+    public <T> void processGeneric(List<T> list, Class<T> type) {
+        System.out.println(type.getSimpleName() + " list");
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **Type erasure**: Không tạo `new T[]`, không `instanceof` với type parameter
+- **PECS**: Producer Extends (đọc), Consumer Super (ghi)
+- **Autoboxing chi phí**: Dùng primitive collections/streams khi cần hiệu suất
+- **Tránh raw types** - luôn dùng parameterized types
+- **Generic overloading**: Type erasure làm method signature giống nhau
 ```
 
 ### 19. Annotations và Metadata
@@ -4702,6 +6438,216 @@ public class OptionalBestPractices {
 }
 ```
 
+**⚠️ Optional chủ yếu để làm kiểu trả về**, **không khuyến nghị** làm field/param; **không `Serializable`** (có chủ ý để ngăn lạm dụng).
+
+#### Bẫy thường gặp với Optional
+
+```java
+// Bẫy 1: Dùng get() trực tiếp thay vì orElse/orElseGet/orElseThrow
+class OptionalTrap {
+    public void problematicGet() {
+        Optional<String> optional = getOptionalString();
+        
+        // SAI: Dùng get() trực tiếp -> có thể NoSuchElementException
+        String value = optional.get(); // DANGER!
+        
+        // SAI: isPresent() + get() giống như null check cũ
+        if (optional.isPresent()) {
+            String val = optional.get(); // Anti-pattern!
+            System.out.println(val.toUpperCase());
+        }
+    }
+    
+    // ĐÚNG: Dùng các phương thức an toàn
+    public void correctApproach() {
+        Optional<String> optional = getOptionalString();
+        
+        // An toàn với default value
+        String value1 = optional.orElse("default");
+        
+        // An toàn với supplier
+        String value2 = optional.orElseGet(() -> "generated default");
+        
+        // An toàn với exception
+        String value3 = optional.orElseThrow(() -> new IllegalStateException("Missing value"));
+        
+        // Functional style
+        optional.ifPresent(val -> System.out.println(val.toUpperCase()));
+        
+        // Chaining
+        optional
+            .filter(s -> s.length() > 5)
+            .map(String::toUpperCase)
+            .ifPresent(System.out::println);
+    }
+    
+    private Optional<String> getOptionalString() {
+        return Math.random() > 0.5 ? Optional.of("Hello") : Optional.empty();
+    }
+}
+```
+
+```java
+// Bẫy 2: orElse tốn kém - đối số luôn được tạo
+class OrElseTrap {
+    public void problematicOrElse() {
+        Optional<String> optional = Optional.of("exists");
+        
+        // SAI: expensiveOperation() luôn được gọi dù optional có giá trị!
+        String result = optional.orElse(expensiveOperation());
+        
+        // Tương tự với object creation
+        String result2 = optional.orElse(new String("expensive"));
+    }
+    
+    // ĐÚNG: Dùng orElseGet cho các operation đắt đỏ
+    public void correctApproach() {
+        Optional<String> optional = Optional.of("exists");
+        
+        // expensiveOperation() chỉ gọi khi optional empty
+        String result = optional.orElseGet(this::expensiveOperation);
+        
+        // Object chỉ tạo khi cần
+        String result2 = optional.orElseGet(() -> new String("expensive"));
+        
+        // orElse cho simple values
+        String result3 = optional.orElse("simple default"); // OK cho constant
+    }
+    
+    private String expensiveOperation() {
+        System.out.println("Expensive operation called!");
+        // Simulate expensive work
+        try { Thread.sleep(100); } catch (InterruptedException e) {}
+        return "expensive result";
+    }
+}
+```
+
+```java
+// Bẫy 3: Đặt Optional trong entity DTO gây rắc rối
+class SerializationTrap {
+    // SAI: Optional không Serializable
+    static class BadUser {
+        private String name;
+        private Optional<String> email; // Serialization problem!
+        
+        // Jackson, GSON khó xử lý Optional
+    }
+    
+    // ĐÚNG: Dùng nullable fields trong entity
+    static class GoodUser {
+        private String name;
+        private String email; // Nullable field
+        
+        // Optional trong getter
+        public Optional<String> getEmail() {
+            return Optional.ofNullable(email);
+        }
+        
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    }
+    
+    // Hoặc dùng @JsonIgnore với Optional
+    static class AlternativeUser {
+        private String name;
+        private String email;
+        
+        @JsonIgnore
+        public Optional<String> getOptionalEmail() {
+            return Optional.ofNullable(email);
+        }
+        
+        // Regular getter cho serialization
+        public String getEmail() {
+            return email;
+        }
+    }
+}
+```
+
+```java
+// Bẫy 4: Dùng Optional làm parameter hoặc field
+class OptionalFieldTrap {
+    // SAI: Optional làm field
+    private Optional<String> name; // Anti-pattern!
+    private Optional<List<String>> items; // Anti-pattern!
+    
+    // SAI: Optional làm parameter
+    public void badMethod(Optional<String> name) { // Anti-pattern!
+        name.ifPresent(System.out::println);
+    }
+    
+    // ĐÚNG: Nullable field, Optional return
+    private String name; // Nullable field
+    private List<String> items; // Nullable hoặc empty list
+    
+    public Optional<String> getName() {
+        return Optional.ofNullable(name);
+    }
+    
+    public Optional<List<String>> getItems() {
+        return Optional.ofNullable(items);
+    }
+    
+    // ĐÚNG: Nullable parameter
+    public void goodMethod(String name) { // Nullable parameter
+        Optional.ofNullable(name)
+            .ifPresent(System.out::println);
+    }
+    
+    // Hoặc method overloading
+    public void goodMethod() {
+        goodMethod(null);
+    }
+}
+```
+
+```java
+// Bẫy 5: Optional.of(null) hoặc nested Optional
+class OptionalCreationTrap {
+    public void problematicCreation() {
+        String nullString = null;
+        
+        try {
+            Optional<String> optional = Optional.of(nullString); // NullPointerException!
+        } catch (NullPointerException e) {
+            System.out.println("Optional.of() with null throws NPE!");
+        }
+        
+        // SAI: Nested Optional
+        Optional<Optional<String>> nested = Optional.of(Optional.of("value")); // Confusing!
+    }
+    
+    // ĐÚNG: Sử dụng đúng cách
+    public void correctCreation() {
+        String nullString = null;
+        String validString = "valid";
+        
+        // An toàn với nullable
+        Optional<String> optional1 = Optional.ofNullable(nullString); // Empty
+        Optional<String> optional2 = Optional.ofNullable(validString); // Present
+        
+        // Dùng flatMap để tránh nested
+        Optional<String> result = optional2
+            .flatMap(this::processString); // Trả về Optional<String>, không nested
+    }
+    
+    private Optional<String> processString(String input) {
+        return input.length() > 3 ? Optional.of(input.toUpperCase()) : Optional.empty();
+    }
+}
+```
+
+**Nguyên tắc quan trọng:**
+- **Optional chủ yếu làm kiểu trả về**, không dùng làm field/parameter
+- **`orElse` tốn kém**: đối số luôn được tạo - dùng `orElseGet` cho expensive operations
+- **Optional không Serializable** - đừng dùng trong entity/DTO
+- **Luôn dùng `orElse*/ifPresent`** thay vì `isPresent() + get()`
+- **Dùng `Optional.ofNullable`** thay vì `Optional.of` với nullable values
+```
+
 ### 22. Modules (Java 9+)
 
 ```mermaid
@@ -4771,12 +6717,187 @@ module com.example.myapp {
 
 #### 22.2. Module Directives
 
+**Restricted Keywords trong Module System:**
+Các từ khoá **`module`, `requires`, `exports`, `opens`, `uses`, `provides`, `with`, `transitive`** là **restricted keywords** - chỉ bị giới hạn phạm vi trong file `module-info.java`.
+
 | Directive | Mô tả | Ví dụ |
 | --- | --- | --- |
 | `requires` | Khai báo dependency | `requires java.sql;` |
 | `requires transitive` | Dependency được export cho modules khác | `requires transitive java.desktop;` |
-| `exports` | Export package cho modules khác | `exports com.example.api;` |
+| `exports` | **Export package cho API compile/run-time** | `exports com.example.api;` |
 | `exports...to` | Export package cho modules cụ thể | `exports com.example.internal to com.example.impl;` |
-| `opens` | Cho phép reflection access | `opens com.example.model;` |
+| `opens` | **Cho phép reflection access (runtime)** | `opens com.example.model;` |
+| `opens...to` | Mở có điều kiện cho reflection | `opens com.example.entity to hibernate.core;` |
 | `uses` | Sử dụng service | `uses com.example.api.Service;` |
 | `provides...with` | Cung cấp service implementation | `provides Service with ServiceImpl;` |
+
+**⚠️ exports vs opens:**
+- **`exports`**: Cho API compile/run-time access
+- **`opens`**: Cho **reflection** (runtime) - cần cho frameworks như Spring, Hibernate
+
+**--illegal-access và JDK 17+:**
+Từ **JDK 17** trở đi, `--illegal-access` **vô hiệu** (JEP 403). Muốn phản chiếu vào JDK internals phải `--add-opens`.
+
+```java
+// module-info.java ví dụ đầy đủ
+module com.example.myapp {
+    requires java.base;          // Tự động - không cần khai báo
+    requires java.sql;
+    requires transitive java.desktop;
+    
+    // API exports - cho compile-time và runtime
+    exports com.example.myapp.api;
+    exports com.example.myapp.util to com.example.myapp.impl;
+    
+    // Opens cho reflection - frameworks cần
+    opens com.example.myapp.model;           // Tất cả modules
+    opens com.example.myapp.entity to        // Chỉ các frameworks cụ thể
+        hibernate.core,
+        jackson.databind;
+    
+    // Service provider pattern
+    provides com.example.myapp.api.Service 
+        with com.example.myapp.impl.ServiceImpl;
+    
+    uses com.example.myapp.api.Logger;
+}
+```
+
+#### Bẫy thường gặp với Modules
+
+```java
+// Bẫy 1: Split package - cùng package ở nhiều modules
+// SAI: Không được cùng package name ở nhiều modules
+
+// Module A
+module com.example.modulea {
+    exports com.example.shared; // Package: com.example.shared
+}
+
+// Module B  
+module com.example.moduleb {
+    exports com.example.shared; // ERROR: Split package!
+}
+
+// ĐÚNG: Mỗi module có package riêng
+module com.example.modulea {
+    exports com.example.modulea.api;
+}
+
+module com.example.moduleb {
+    exports com.example.moduleb.api;
+}
+```
+
+```java
+// Bẫy 2: Circular dependency giữa modules
+// SAI: Dependency phải acyclic
+
+// Module A
+module com.example.modulea {
+    requires com.example.moduleb; // A -> B
+    exports com.example.modulea.api;
+}
+
+// Module B
+module com.example.moduleb {
+    requires com.example.modulea; // B -> A = Circular!
+    exports com.example.moduleb.api;
+}
+
+// ĐÚNG: Tách thành module chung
+module com.example.common {
+    exports com.example.common.api;
+}
+
+module com.example.modulea {
+    requires com.example.common;
+    exports com.example.modulea.api;
+}
+
+module com.example.moduleb {
+    requires com.example.common; 
+    exports com.example.moduleb.api;
+}
+```
+
+```java
+// Bẫy 3: Quên opens cho reflection - frameworks không hoạt động
+public class ReflectionTrap {
+    // Entity cho JPA/Hibernate
+    @Entity
+    public class User {
+        @Id
+        private Long id;
+        private String name;
+        // getters/setters
+    }
+}
+
+// SAI: Không opens -> Hibernate không truy cập được
+module com.example.app {
+    requires hibernate.core;
+    exports com.example.app.model; // Chỉ exports, không opens!
+}
+
+// ĐÚNG: Opens cho frameworks
+module com.example.app {
+    requires hibernate.core;
+    exports com.example.app.model;
+    opens com.example.app.model to hibernate.core; // Cho phép reflection
+}
+```
+
+```java
+// Bẫy 4: --illegal-access đã deprecated từ JDK 17+
+public class IllegalAccessTrap {
+    public void oldWayNotWorking() {
+        // Trước JDK 17: có thể dùng --illegal-access=permit
+        // java --illegal-access=permit MyApp
+        
+        try {
+            // Truy cập JDK internals
+            Class<?> clazz = Class.forName("sun.misc.Unsafe");
+            // JDK 17+: Không còn hoạt động!
+        } catch (Exception e) {
+            System.out.println("Access denied in JDK 17+!");
+        }
+    }
+    
+    // ĐÚNG: Dùng --add-opens từ JDK 17+
+    // java --add-opens java.base/sun.misc=ALL-UNNAMED MyApp
+    // Hoặc trong module-info:
+    // opens sun.misc; (nếu là module của bạn)
+}
+```
+
+```java
+// Bẫy 5: Automatic modules và classpath hell
+class AutomaticModuleTrap {
+    // Legacy JAR thành automatic module
+    // Tên module từ JAR filename hoặc MANIFEST.MF
+    
+    // commons-lang3-3.12.0.jar -> commons.lang3 (automatic module)
+    // Nếu JAR không có module-info.java
+}
+
+// module-info.java
+module com.example.app {
+    requires commons.lang3; // Automatic module
+    
+    // Vấn đề: Automatic module exports tất cả packages!
+    // Không kiểm soát được encapsulation
+}
+
+// ĐÚNG: Migration chiến lược
+// 1. Dùng automatic modules cho giai đoạn transition
+// 2. Kích thích thư viện thêm module-info.java
+// 3. Tự tạo module descriptor cho các JAR quan trọng
+```
+
+**Nguyên tắc quan trọng:**
+- **Restricted keywords** chỉ trong module-info.java: `module`, `requires`, `exports`, `opens`, `uses`, `provides`, `with`, `transitive`
+- **`exports`** cho API compile/run-time; **`opens`** cho **reflection** (runtime)
+- **Split package bị cấm** - mỗi package chỉ ở một module
+- **Dependency phải acyclic** - không được circular dependency
+- **--illegal-access vô hiệu từ JDK 17+** - dùng `--add-opens` thay thế
