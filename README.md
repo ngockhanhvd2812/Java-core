@@ -8,16 +8,6 @@
 > **Tài liệu học tập Java chuyên sâu với 22+ chủ đề cốt lõi, 100+ ví dụ thực tế và Common Pitfalls**  
 > Từ **OOP cơ bản** đến **Java Modules**, từ **Multithreading** đến **Regular Expressions** - Tất cả trong một tài liệu!
 
-## 🎯 Điểm Nổi Bật Phiên Bản Mới
-
-### ⚠️ **Common Pitfalls - Tránh Bẫy Thường Gặp**
-- **500+ dòng code** minh họa các lỗi phổ biến và cách khắc phục
-- **Bẫy kế thừa**: Static method hiding, field non-polymorphism, private members
-- **Bẫy Collections**: subList() views, fail-fast iterators, Arrays.asList() limitations  
-- **Bẫy String & Unicode**: UTF-16 code units vs code points, emoji handling
-- **Bẫy Multithreading**: Race conditions, deadlocks, happens-before relationships
-- **Bẫy Performance**: Catastrophic backtracking, memory leaks, thread safety
-
 ### 🧱 **Nền Tảng OOP Vững Chắc - Cập Nhật Toàn Diện**
 - **Kế thừa & Đa hình**: Phân biệt inheritance vs overriding cho `final`, `static`, `private`, `constructors`
 - **Quan hệ Is-A vs Has-A**: Ví dụ thực tế và guidelines sử dụng
