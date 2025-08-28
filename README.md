@@ -1,31 +1,184 @@
 [![Tác giả](https://img.shields.io/badge/Tác_giả-NgocKhanh-blue?style=for-the-badge&logo=github)](https://github.com/ngockhanhvd2812)
+[![Java](https://img.shields.io/badge/Java-8%2B-orange?style=for-the-badge&logo=java)](https://www.oracle.com/java/)
+[![Documentation](https://img.shields.io/badge/Documentation-Complete-green?style=for-the-badge&logo=gitbook)](./concepts.md)
+[![Best Practices](https://img.shields.io/badge/Best_Practices-Included-blue?style=for-the-badge&logo=checkmarx)](./concepts.md)
 
-# ☕ Cẩm Nang Java Toàn Diện
+# ☕ Cẩm Nang Java Toàn Diện - Phiên Bản Nâng Cao
 
-> **Một tài liệu học tập và ôn tập "tất cả trong một" dành cho Lập trình viên Java.**  
-> Khám phá các khái niệm từ **OOP**, **Đa luồng** đến **Stream API** & **Reflection** qua các bảng so sánh, ví dụ thực tế và sơ đồ trực quan.
+> **Tài liệu học tập Java chuyên sâu với 22+ chủ đề cốt lõi, 100+ ví dụ thực tế và Common Pitfalls**  
+> Từ **OOP cơ bản** đến **Java Modules**, từ **Multithreading** đến **Regular Expressions** - Tất cả trong một tài liệu!
+
+## 🎯 Điểm Nổi Bật Phiên Bản Mới
+
+### ⚠️ **Common Pitfalls - Tránh Bẫy Thường Gặp**
+- **500+ dòng code** minh họa các lỗi phổ biến và cách khắc phục
+- **Bẫy kế thừa**: Static method hiding, field non-polymorphism, private members
+- **Bẫy Collections**: subList() views, fail-fast iterators, Arrays.asList() limitations  
+- **Bẫy String & Unicode**: UTF-16 code units vs code points, emoji handling
+- **Bẫy Multithreading**: Race conditions, deadlocks, happens-before relationships
+- **Bẫy Performance**: Catastrophic backtracking, memory leaks, thread safety
+
+### 🧱 **Nền Tảng OOP Vững Chắc - Cập Nhật Toàn Diện**
+- **Kế thừa & Đa hình**: Phân biệt inheritance vs overriding cho `final`, `static`, `private`, `constructors`
+- **Quan hệ Is-A vs Has-A**: Ví dụ thực tế và guidelines sử dụng
+- **Lớp lồng nhau**: So sánh chi tiết 4 loại với use cases cụ thể
+- **Instance vs Data Type**: Phân tích mối quan hệ và casting rules
+
+### 🧰 **Collections Framework - Phân Tích Chuyên Sâu**
+- **Performance Analysis**: Big O notation cho từng operation
+- **Thread-Safety**: So sánh ConcurrentHashMap vs Hashtable vs SynchronizedMap
+- **Modern Collections**: CopyOnWriteArrayList, ConcurrentSkipListSet
+- **Fail-fast vs Weakly-consistent**: Iterators behavior và exception handling
+
+### ⚡ **Multithreading & Concurrency - Kiến Thức Nâng Cao**
+- **Java Memory Model**: Happens-before relationships, visibility guarantees
+- **Thread States**: 6 trạng thái chuẩn với state transition diagram
+- **Synchronization Mechanisms**: Method, block, static với performance implications
+- **Concurrent Collections**: Best practices và performance benchmarks
+
+### 🔧 **Modern Java Features (Java 8+)**
+- **Stream API**: Intermediate vs terminal operations, parallel streams, collector patterns
+- **Lambda & Method References**: Functional interfaces, closure captures
+- **Optional**: Proper usage patterns, serialization issues, performance considerations
+- **Date & Time API**: Timezone handling, DST issues, Instant vs ZonedDateTime
+
+### 🔍 **Advanced Topics - Newly Added**
+- **Generics & Type Safety**: PECS principle, type erasure, bounded wildcards
+- **Annotations & Metadata**: Built-in annotations, custom annotation processing
+- **Java Modules (JPMS)**: Module directives, exports vs opens, migration strategies
+- **Regular Expressions**: Performance optimization, Unicode support, thread safety
+- **JPA/Hibernate**: Fetch strategies, N+1 problem, LazyInitializationException
 
 ---
 
-### 🧱 Nền Tảng OOP Vững Chắc
-- **Phân tích sâu** các trụ cột của OOP qua các bảng so sánh và ví dụ cụ thể.
-- **Kế thừa & Đa hình**: Phân biệt rạch ròi qua các từ khóa `final`, `static`, `private`.
-- **Quan hệ Is-A vs. Has-A**: Làm rõ hai mối quan hệ cốt lõi trong thiết kế.
-- **Lớp lồng nhau**: Tổng hợp và so sánh 4 loại: `Static`, `Inner`, `Local`, và `Anonymous`.
+## 📖 Cấu Trúc Tài Liệu
 
-### 🧰 Làm Chủ Java Collections & String
-- **So sánh chi tiết** về cấu trúc, hiệu năng và trường hợp sử dụng của các Collection.
-- **List, Set, Map**: Bảng so sánh hiệu năng và phương thức của `ArrayList`, `HashSet`, `HashMap` và các biến thể.
-- **String vs. StringBuilder**: Giải thích cặn kẽ về tính bất biến (immutability) và an toàn luồng (thread-safety).
+### **I. OOP Fundamentals** (Nền tảng hướng đối tượng)
+- ✅ Inheritance & Overriding với common pitfalls
+- ✅ Polymorphism vs Overriding comparison  
+- ✅ Instance vs Data Type relationships
+- ✅ Collections Framework với performance analysis
+- ✅ String, StringBuilder, StringBuffer với Unicode handling
+- ✅ Nested Classes với memory considerations
 
-### ⚡ Lập Trình Đa Luồng & Đồng Bộ Hóa
-- **Trực quan hóa** vòng đời của luồng và cơ chế khóa bằng sơ đồ trạng thái chi tiết.
-- **Synchronization**: Phân tích 3 cơ chế khóa: `Method`, `Block`, và `Static Synchronization`.
-- **Vòng đời Thread**: Sơ đồ trạng thái từ `NEW` đến `TERMINATED` với các đường chuyển tiếp.
-- **Concurrency vs. Multithreading**: Bảng so sánh giúp phân biệt hai khái niệm dễ nhầm lẫn.
+### **II. Properties & Scope** (Phạm vi và tính chất)
+- ✅ Data type ranges với boolean specification fix
+- ✅ Member vs Local variables
+- ✅ Interface default behaviors
+- ✅ Access modifiers với inheritance rules
 
-### 🚀 Khám Phá Các API Nâng Cao
-- **Hướng dẫn toàn diện** về các API mạnh mẽ của Java 8+ giúp viết code hiện đại và hiệu quả.
-- **Stream API**: Xử lý dữ liệu theo phong cách khai báo với `filter`, `map`, `collect`.
-- **Java Reflection**: Khám phá cách truy cập và thay đổi `private` field/method tại thời điểm chạy.
-- **Date & Time API**: Tổng quan các lớp `LocalDate`, `ZonedDateTime`, `Duration` thay thế cho API cũ.
+### **III. Multithreading** (Lập trình đa luồng)
+- ✅ Synchronization mechanisms với deadlock prevention
+- ✅ Thread lifecycle với JMM considerations
+- ✅ Concurrency vs Multithreading
+- ✅ Happens-before relationships
+
+### **IV. File & I/O** (File và luồng I/O)
+- ✅ File, InputStream, Reader comparison
+- ✅ Files.walk() usage patterns
+
+### **V. Exception Handling** (Xử lý ngoại lệ)
+- ✅ Exception hierarchy và handling strategies
+- ✅ Inheritance exception rules
+
+### **VI. Advanced Concepts** (Khái niệm nâng cao)
+- ✅ Hibernate/JPA annotations với fetch strategies
+- ✅ Date & Time API với timezone pitfalls
+- ✅ Stream API với performance considerations
+- ✅ Java Reflection với security implications
+- ✅ Regular Expressions với catastrophic backtracking
+
+### **VII. Modern Java** (Java hiện đại)
+- ✅ Generics với PECS principle và type erasure
+- ✅ Annotations và custom processing
+- ✅ Lambda expressions và functional programming
+- ✅ Optional best practices
+- ✅ Java Modules (JPMS) với migration guide
+
+---
+
+## 🎯 Ai Nên Sử Dụng Tài Liệu Này?
+
+### 👨‍💻 **Java Developers (Intermediate to Advanced)**
+- Củng cố kiến thức nền tảng với các edge cases
+- Học cách tránh các lỗi phổ biến trong production
+- Nắm vững các tính năng Java 8+ và best practices
+
+### 🎓 **Students & Interview Candidates**
+- Ôn tập comprehensive cho Java technical interviews
+- Hiểu sâu về các concepts thay vì chỉ học thuộc lòng
+- Thực hành với 100+ code examples thực tế
+
+### 👔 **Team Leads & Architects**
+- Reference guide cho code review và mentoring
+- Training material cho team onboarding
+- Architecture decisions với performance implications
+
+### 🔧 **DevOps & Performance Engineers**
+- Memory management và garbage collection insights
+- Multithreading performance tuning
+- JVM optimization considerations
+
+---
+
+## 📈 Thống Kê Nội Dung
+
+| Chủ đề | Số lượng | Mô tả |
+|--------|----------|-------|
+| **Core Topics** | 22+ | Từ OOP cơ bản đến Java Modules |
+| **Code Examples** | 100+ | Ví dụ thực tế với best practices |
+| **Common Pitfalls** | 50+ | Bẫy thường gặp với solutions |
+| **Performance Tips** | 30+ | Optimization techniques |
+| **Diagrams** | 15+ | Mermaid flowcharts và state diagrams |
+| **Comparison Tables** | 25+ | Feature comparisons và decision matrices |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/ngockhanhvd2812/Java-core.git
+
+# Navigate to documentation
+cd Java-core
+
+# Open main concepts file
+open concepts.md
+```
+
+### 📚 **Cách Sử Dụng Hiệu Quả**
+
+1. **📖 Đọc tuần tự**: Bắt đầu từ OOP fundamentals
+2. **💡 Focus on Pitfalls**: Chú ý các section "Bẫy thường gặp"
+3. **🔬 Practice Examples**: Chạy thử các code examples
+4. **🎯 Apply to Projects**: Áp dụng best practices vào dự án thực tế
+
+---
+
+## 🤝 Contributing
+
+Mọi đóng góp đều được hoan nghênh! Vui lòng:
+
+1. Fork repository
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
+
+---
+
+## 📞 Liên Hệ
+
+- **GitHub**: [@ngockhanhvd2812](https://github.com/ngockhanhvd2812)
+- **Email**: ngockhanhvd2812@gmail.com
+
+---
+
+## 📄 License
+
+Dự án này được phân phối dưới MIT License. Xem `LICENSE` file để biết thêm chi tiết.
+
+---
+
+*⭐ Nếu tài liệu này hữu ích, đừng quên star repository nhé! ⭐*
